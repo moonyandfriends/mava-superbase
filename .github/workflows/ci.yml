@@ -36,9 +36,17 @@ jobs:
       run: black --check .
 
     - name: Type check with mypy
+      env:
+        MAVA_AUTH_TOKEN: test_token
+        SUPABASE_URL: https://test.supabase.co
+        SUPABASE_SERVICE_KEY: test_key
       run: mypy mava_sync.py --ignore-missing-imports
 
     - name: Test with pytest
+      env:
+        MAVA_AUTH_TOKEN: test_token
+        SUPABASE_URL: https://test.supabase.co
+        SUPABASE_SERVICE_KEY: test_key
       run: |
         pytest tests/ -v --cov=mava_sync --cov-report=xml --cov-report=term-missing
 
@@ -95,4 +103,4 @@ jobs:
 
     - name: Test Docker image
       run: |
-        docker run --rm -e MAVA_AUTH_TOKEN=test -e SUPABASE_URL=test -e SUPABASE_SERVICE_KEY=test mava-sync:latest python -c "import mava_sync; print('Import successful')" 
+        docker run --rm -e MAVA_AUTH_TOKEN=test_token -e SUPABASE_URL=https://test.supabase.co -e SUPABASE_SERVICE_KEY=test_key mava-sync:latest python -c "import mava_sync; print('Import successful')" 
