@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """mava_sync.py — Sync Mava support tickets to Supabase
 
-Run this script periodically (e.g. via Railway cron job) to pull **all** tickets 
+Run this script periodically (e.g. via Railway cron job) to pull **all** tickets
 from the Mava support API and upsert them into a Supabase table called `tickets`.
 
 Environment variables required:
@@ -19,16 +19,15 @@ The Supabase table should have at minimum a primary‑key column `id` matching t
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sys
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from supabase import Client, create_client
 
 # ───────── configuration & setup ─────────
 load_dotenv()
@@ -76,7 +75,7 @@ def health_check() -> bool:
         return False
 
 
-def fetch_page(session: requests.Session, skip: int) -> List[Dict[str, Any]]:
+def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     """Return a single page of tickets from the Mava API."""
     params = {
         "limit": PAGE_SIZE,
@@ -94,11 +93,11 @@ def fetch_page(session: requests.Session, skip: int) -> List[Dict[str, Any]]:
     data = r.json()
 
     # Adjust this according to the structure Mava returns.
-    tickets: List[Dict[str, Any]] = data.get("tickets") or data.get("data") or data
+    tickets: list[dict[str, Any]] = data.get("tickets") or data.get("data") or data
     return tickets
 
 
-def upsert_tickets(tickets: List[Dict[str, Any]]) -> None:
+def upsert_tickets(tickets: list[dict[str, Any]]) -> None:
     """Bulk upsert a list of ticket dictionaries into Supabase."""
     if not tickets:
         return
@@ -129,7 +128,7 @@ def sync_all_pages() -> None:
     while True:
         try:
             page = fetch_page(session, skip)
-        except Exception as e:
+        except Exception:
             logger.exception("API request failed at skip=%d", skip)
             raise
 
@@ -150,7 +149,7 @@ if __name__ == "__main__":
         if not health_check():
             logger.error("Health check failed, exiting")
             sys.exit(1)
-            
+
         start = datetime.utcnow()
         sync_all_pages()
         duration = (datetime.utcnow() - start).total_seconds()
