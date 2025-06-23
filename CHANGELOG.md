@@ -23,9 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 ### Fixed
+- Fixed pytest module import issues by adding pythonpath configuration
+- Fixed mypy type checking errors by improving type annotations
 - Fixed trailing whitespace and newline issues in test files
 - Updated deprecated GitHub Actions upload-artifact from v3 to v4
-- Fixed mypy type checking errors by improving type annotations
 
 ### Removed
 - N/A
