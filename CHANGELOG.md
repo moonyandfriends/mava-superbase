@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Continuous sync mode for cloud deployment
 - Environment-based configuration
 - Detailed documentation and setup guides
+- Added dev-requirements.txt for development dependencies
+- Added type stubs (types-requests, types-python-dateutil) for better mypy support
 
 ### Changed
 - N/A
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed trailing whitespace and newline issues in test files
 - Updated deprecated GitHub Actions upload-artifact from v3 to v4
+- Fixed mypy type checking errors by improving type annotations
 
 ### Removed
 - N/A

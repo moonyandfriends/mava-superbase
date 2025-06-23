@@ -78,7 +78,7 @@ def health_check() -> bool:
 
 def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     """Return a single page of tickets from the Mava API."""
-    params = {
+    params: dict[str, str | int] = {
         "limit": PAGE_SIZE,
         "skip": skip,
         "sort": "LAST_MODIFIED",
