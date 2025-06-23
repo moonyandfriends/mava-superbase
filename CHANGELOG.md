@@ -21,20 +21,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 ### Fixed
-- N/A
+- Fixed trailing whitespace and newline issues in test files
+- Updated deprecated GitHub Actions upload-artifact from v3 to v4
 
 ### Removed
 - N/A
 
-## [1.0.0] - 2024-01-15
+## [1.2.0] - 2025-01-27
+
+### Changed
+- Converted from continuous sync service to Railway cron job for better efficiency
+- Removed SYNC_INTERVAL environment variable (no longer needed)
+- Updated railway.json with hourly cron schedule "0 * * * *"
+- Simplified service to single-run mode only
+
+### Fixed
+- Removed invalid --show-source argument from ruff command in CI
+- Updated pyproject.toml to new [tool.ruff.lint] format
+- Fixed deprecated typing.List/Dict imports to use lowercase list/dict
+- Resolved multiple linting errors and import issues
+
+## [1.1.0] - 2025-01-27
+
+### Fixed
+- Added required environment variables for CI testing
+- Fixed GitHub Actions cancellation due to missing test variables
+
+## [1.0.0] - 2025-01-27
 
 ### Added
-- Initial release of Mava Supabase Sync service
-- Core sync functionality between Mava API and Supabase
-- Support for both single-run and continuous sync modes
-- Railway-specific deployment optimizations
-- Docker support for containerized deployments
-- Comprehensive error handling and retry mechanisms
-- Environment variable configuration
-- Health checks for monitoring
-- Detailed logging for debugging and monitoring 
+- Initial Mava-Supabase sync service with Railway deployment
+- Support for paginated API fetching from Mava
+- Upsert functionality to Supabase with conflict resolution
+- Health check endpoint for service monitoring
+- Comprehensive test suite with pytest
+- Docker containerization with security best practices
+- CI/CD pipeline with GitHub Actions
+- Environment-based configuration
+- Railway deployment configuration
+- Modern Python project structure with Poetry/Rye support
+- Code quality tools: ruff, black, mypy
+- Security scanning with bandit and safety 
