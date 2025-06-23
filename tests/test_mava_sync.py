@@ -165,4 +165,6 @@ class TestEnvironmentVariables:
             importlib.reload(mava_sync)
 
             assert mava_sync.PAGE_SIZE == 50
-            assert mava_sync.LOG_LEVEL == "INFO" 
+            assert mava_sync.LOG_LEVEL == "INFO"
+
+
