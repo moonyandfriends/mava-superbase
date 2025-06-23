@@ -4,14 +4,12 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python mava_sync.py",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+    "cronSchedule": "0 * * * *",
+    "startCommand": "python mava_sync.py"
   },
   "environments": {
     "production": {
       "variables": {
-        "SYNC_INTERVAL": "3600",
         "LOG_LEVEL": "INFO",
         "PAGE_SIZE": "50"
       }

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """mava_sync.py — Sync Mava support tickets to Supabase
 
-Run this script periodically (e.g. via cron) to pull **all** tickets from the
-Mava support API and upsert them into a Supabase table called `tickets`.
+Run this script periodically (e.g. via Railway cron job) to pull **all** tickets 
+from the Mava support API and upsert them into a Supabase table called `tickets`.
 
 Environment variables required:
   MAVA_AUTH_TOKEN        → bearer token for the Mava API
@@ -11,7 +11,8 @@ Environment variables required:
 Optional environment variables:
   PAGE_SIZE              → API page size (default: 50)
   LOG_LEVEL              → Python logging level (default: INFO)
-  SYNC_INTERVAL          → Sync interval in seconds (default: 3600 for Railway)
+
+Railway cron schedule: "0 * * * *" (runs every hour)
 
 The Supabase table should have at minimum a primary‑key column `id` matching the
 `id` field in each ticket. All other fields will be upserted as received.
@@ -22,7 +23,6 @@ import json
 import logging
 import os
 import sys
-import time
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -39,7 +39,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 PAGE_SIZE = int(os.getenv("PAGE_SIZE", "50"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-SYNC_INTERVAL = int(os.getenv("SYNC_INTERVAL", "3600"))  # 1 hour default
+# SYNC_INTERVAL removed - now using Railway cron jobs instead
 
 if not all([MAVA_AUTH_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_KEY]):
     sys.stderr.write(
@@ -143,41 +143,18 @@ def sync_all_pages() -> None:
     logger.info("Sync complete — %d tickets processed", total)
 
 
-def run_continuous_sync() -> None:
-    """Run sync continuously with specified interval (for Railway deployment)."""
-    logger.info("Starting continuous sync mode with %d second intervals", SYNC_INTERVAL)
-    
-    # Initial health check
-    if not health_check():
-        logger.error("Initial health check failed, exiting")
-        sys.exit(1)
-    
-    while True:
-        try:
-            start = datetime.utcnow()
-            sync_all_pages()
-            duration = (datetime.utcnow() - start).total_seconds()
-            logger.info("Sync completed in %.1fs, sleeping for %ds", duration, SYNC_INTERVAL)
-            time.sleep(SYNC_INTERVAL)
-        except KeyboardInterrupt:
-            logger.info("Received interrupt signal, shutting down gracefully")
-            break
-        except Exception:
-            logger.exception("Sync failed, will retry after interval")
-            time.sleep(SYNC_INTERVAL)
-
-
 if __name__ == "__main__":
-    # Check if running in Railway (or similar container environment)
-    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("PORT"):
-        run_continuous_sync()
-    else:
-        # Single run mode (for local/cron usage)
-        try:
-            start = datetime.utcnow()
-            sync_all_pages()
-            duration = (datetime.utcnow() - start).total_seconds()
-            logger.info("Finished in %.1fs", duration)
-        except Exception:
-            logger.exception("Uncaught error — sync aborted")
-            sys.exit(1) 
+    # Always run in single-run mode (perfect for Railway cron jobs)
+    try:
+        # Initial health check
+        if not health_check():
+            logger.error("Health check failed, exiting")
+            sys.exit(1)
+            
+        start = datetime.utcnow()
+        sync_all_pages()
+        duration = (datetime.utcnow() - start).total_seconds()
+        logger.info("Finished in %.1fs", duration)
+    except Exception:
+        logger.exception("Uncaught error — sync aborted")
+        sys.exit(1) 

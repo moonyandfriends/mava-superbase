@@ -75,7 +75,6 @@ docker run -d \
 |----------|---------|-------------|
 | `PAGE_SIZE` | `50` | Number of tickets per API request |
 | `LOG_LEVEL` | `INFO` | Python logging level |
-| `SYNC_INTERVAL` | `3600` | Sync interval in seconds (1 hour) |
 
 ## Database Setup
 
@@ -105,7 +104,7 @@ CREATE POLICY "Service role can manage tickets" ON tickets
 1. **Fetches Data**: Retrieves all tickets from Mava API using pagination
 2. **Upserts Records**: Updates existing tickets or inserts new ones in Supabase
 3. **Handles Errors**: Retries on failures and logs all operations
-4. **Runs Continuously**: In Railway/Docker, runs continuously with configurable intervals
+4. **Runs on Schedule**: In Railway, runs as a cron job (hourly by default)
 
 ## Monitoring
 
@@ -114,10 +113,11 @@ CREATE POLICY "Service role can manage tickets" ON tickets
 The service provides comprehensive logging:
 
 ```
-2024-01-15 10:30:00 [INFO] Starting Mava → Supabase sync
-2024-01-15 10:30:01 [INFO] Upserted 25 tickets
-2024-01-15 10:30:02 [INFO] Sync complete — 150 tickets processed
-2024-01-15 10:30:02 [INFO] Sync completed in 2.1s, sleeping for 3600s
+2024-01-15 10:00:00 [INFO] Health check passed
+2024-01-15 10:00:01 [INFO] Starting Mava → Supabase sync
+2024-01-15 10:00:02 [INFO] Upserted 25 tickets
+2024-01-15 10:00:03 [INFO] Sync complete — 150 tickets processed
+2024-01-15 10:00:04 [INFO] Finished in 2.1s
 ```
 
 ### Health Checks
@@ -125,6 +125,19 @@ The service provides comprehensive logging:
 The service includes built-in health checks that verify:
 - Supabase database connectivity
 - API credentials validity
+
+### Railway Cron Scheduling
+
+The service runs as a Railway cron job with the schedule `"0 * * * *"` (every hour).
+
+**Common Cron Schedules:**
+- `"0 * * * *"` - Every hour (default)
+- `"*/30 * * * *"` - Every 30 minutes
+- `"0 */2 * * *"` - Every 2 hours
+- `"0 9-17 * * *"` - Every hour during business hours (9 AM - 5 PM)
+- `"0 0 * * *"` - Once daily at midnight
+
+To change the schedule, modify the `cronSchedule` in `railway.json`.
 
 ## Development
 
@@ -150,8 +163,8 @@ pip install -r requirements.txt
 # Run with debug logging
 LOG_LEVEL=DEBUG python mava_sync.py
 
-# Run single sync (non-continuous)
-unset RAILWAY_ENVIRONMENT && python mava_sync.py
+# Run single sync (default behavior)
+python mava_sync.py
 ```
 
 ## API Reference
