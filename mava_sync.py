@@ -93,8 +93,14 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
 
     data = r.json()
 
-    # Adjust this according to the structure Mava returns.
-    tickets: list[dict[str, Any]] = data.get("tickets") or data.get("data") or data
+    # Handle different response formats from Mava API
+    if isinstance(data, list):
+        # Direct array response
+        tickets: list[dict[str, Any]] = data
+    else:
+        # Object response with tickets in a nested field
+        tickets = data.get("tickets") or data.get("data") or []
+    
     return tickets
 
 
