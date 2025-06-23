@@ -1,0 +1,20 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "python mava_sync.py",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "SYNC_INTERVAL": "3600",
+        "LOG_LEVEL": "INFO",
+        "PAGE_SIZE": "50"
+      }
+    }
+  }
+} 
