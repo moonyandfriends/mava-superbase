@@ -63,6 +63,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # ───────── helpers ─────────
 
+
 def health_check() -> bool:
     """Basic health check to verify API connectivity."""
     try:
@@ -109,7 +110,7 @@ def upsert_tickets(tickets: list[dict[str, Any]]) -> None:
         .execute()
     )
     # Check if response has data (successful upsert)
-    if not hasattr(resp, 'data') or resp.data is None:
+    if not hasattr(resp, "data") or resp.data is None:
         logger.error("Supabase upsert error: %s", resp)
         raise RuntimeError("Supabase upsert failed")
 
@@ -117,6 +118,7 @@ def upsert_tickets(tickets: list[dict[str, Any]]) -> None:
 
 
 # ───────── main sync loop ─────────
+
 
 def sync_all_pages() -> None:
     """Sync all pages of tickets from Mava to Supabase."""

@@ -1,4 +1,5 @@
 """Tests for mava_sync.py"""
+
 import importlib
 import os
 from unittest.mock import Mock, patch
@@ -25,10 +26,12 @@ def sample_tickets():
     ]
 
 
-@patch('mava_sync.supabase')
+@patch("mava_sync.supabase")
 def test_health_check_success(mock_supabase):
     """Test successful health check"""
-    mock_supabase.table.return_value.select.return_value.limit.return_value.execute.return_value = Mock()
+    mock_supabase.table.return_value.select.return_value.limit.return_value.execute.return_value = (
+        Mock()
+    )
 
     result = health_check()
 
@@ -36,7 +39,7 @@ def test_health_check_success(mock_supabase):
     mock_supabase.table.assert_called_once_with("tickets")
 
 
-@patch('mava_sync.supabase')
+@patch("mava_sync.supabase")
 def test_health_check_failure(mock_supabase):
     """Test failed health check"""
     mock_supabase.table.side_effect = Exception("Connection error")
@@ -83,12 +86,14 @@ def test_fetch_page_direct_array(mock_session, sample_tickets):
     assert result == sample_tickets
 
 
-@patch('mava_sync.supabase')
+@patch("mava_sync.supabase")
 def test_upsert_tickets_success(mock_supabase, sample_tickets):
     """Test successful ticket upsert"""
     mock_resp = Mock()
     mock_resp.data = sample_tickets
-    mock_supabase.table.return_value.upsert.return_value.execute.return_value = mock_resp
+    mock_supabase.table.return_value.upsert.return_value.execute.return_value = (
+        mock_resp
+    )
 
     # Should not raise any exception
     upsert_tickets(sample_tickets)
@@ -96,7 +101,7 @@ def test_upsert_tickets_success(mock_supabase, sample_tickets):
     mock_supabase.table.assert_called_once_with("tickets")
 
 
-@patch('mava_sync.supabase')
+@patch("mava_sync.supabase")
 def test_upsert_tickets_empty_list(mock_supabase):
     """Test upsert with empty ticket list"""
     upsert_tickets([])
@@ -105,20 +110,22 @@ def test_upsert_tickets_empty_list(mock_supabase):
     mock_supabase.table.assert_not_called()
 
 
-@patch('mava_sync.supabase')
+@patch("mava_sync.supabase")
 def test_upsert_tickets_failure(mock_supabase, sample_tickets):
     """Test failed ticket upsert"""
     mock_resp = Mock()
     mock_resp.data = None
-    mock_supabase.table.return_value.upsert.return_value.execute.return_value = mock_resp
+    mock_supabase.table.return_value.upsert.return_value.execute.return_value = (
+        mock_resp
+    )
 
     with pytest.raises(RuntimeError, match="Supabase upsert failed"):
         upsert_tickets(sample_tickets)
 
 
-@patch('mava_sync.fetch_page')
-@patch('mava_sync.upsert_tickets')
-@patch('requests.Session')
+@patch("mava_sync.fetch_page")
+@patch("mava_sync.upsert_tickets")
+@patch("requests.Session")
 def test_sync_all_pages(mock_session_class, mock_upsert, mock_fetch, sample_tickets):
     """Test complete sync process"""
     mock_session = Mock()
@@ -136,13 +143,16 @@ def test_sync_all_pages(mock_session_class, mock_upsert, mock_fetch, sample_tick
 @pytest.fixture(autouse=True)
 def mock_env_vars():
     """Mock required environment variables"""
-    with patch.dict(os.environ, {
-        'MAVA_AUTH_TOKEN': 'test_token',
-        'SUPABASE_URL': 'https://test.supabase.co',
-        'SUPABASE_SERVICE_KEY': 'test_key',
-        'PAGE_SIZE': '50',
-        'LOG_LEVEL': 'INFO'
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "MAVA_AUTH_TOKEN": "test_token",
+            "SUPABASE_URL": "https://test.supabase.co",
+            "SUPABASE_SERVICE_KEY": "test_key",
+            "PAGE_SIZE": "50",
+            "LOG_LEVEL": "INFO",
+        },
+    ):
         yield
 
 
@@ -157,14 +167,16 @@ class TestEnvironmentVariables:
 
     def test_optional_vars_defaults(self):
         """Test that optional variables have proper defaults"""
-        with patch.dict(os.environ, {
-            'MAVA_AUTH_TOKEN': 'test_token',
-            'SUPABASE_URL': 'https://test.supabase.co',
-            'SUPABASE_SERVICE_KEY': 'test_key'
-        }, clear=True):
+        with patch.dict(
+            os.environ,
+            {
+                "MAVA_AUTH_TOKEN": "test_token",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "SUPABASE_SERVICE_KEY": "test_key",
+            },
+            clear=True,
+        ):
             importlib.reload(mava_sync)
 
             assert mava_sync.PAGE_SIZE == 50
             assert mava_sync.LOG_LEVEL == "INFO"
-
-
