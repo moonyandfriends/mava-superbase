@@ -156,4 +156,4 @@ if __name__ == "__main__":
         logger.info("Finished in %.1fs", duration)
     except Exception:
         logger.exception("Uncaught error — sync aborted")
-        sys.exit(1) 
+        sys.exit(1)

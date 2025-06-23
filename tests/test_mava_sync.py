@@ -1,9 +1,11 @@
 """Tests for mava_sync.py"""
+import importlib
 import os
 from unittest.mock import Mock, patch
 
 import pytest
 
+import mava_sync
 from mava_sync import fetch_page, health_check, sync_all_pages, upsert_tickets
 
 
@@ -151,8 +153,6 @@ class TestEnvironmentVariables:
         """Test behavior when required environment variables are missing"""
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(SystemExit):
-                import importlib
-                import mava_sync
                 importlib.reload(mava_sync)
 
     def test_optional_vars_defaults(self):
@@ -162,8 +162,6 @@ class TestEnvironmentVariables:
             'SUPABASE_URL': 'https://test.supabase.co',
             'SUPABASE_SERVICE_KEY': 'test_key'
         }, clear=True):
-            import importlib
-            import mava_sync
             importlib.reload(mava_sync)
 
             assert mava_sync.PAGE_SIZE == 50
