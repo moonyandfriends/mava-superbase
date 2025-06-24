@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""mava_sync.py — Sync Mava support tickets to Supabase with full data normalization
+"""
+Mava → Supabase Sync Service
 
 Run this script periodically (e.g. via Railway cron job) to pull **all** tickets
 from the Mava support API and upsert them into normalized Supabase tables.
@@ -20,6 +21,8 @@ This version creates and populates multiple normalized tables:
 - messages: Individual ticket messages
 - ticket_attributes: Ticket-level attributes
 - customer_attributes: Customer-level attributes
+
+Updated: 2025-01-27 - Fixed 400 error in authentication test
 """
 from __future__ import annotations
 
