@@ -46,14 +46,16 @@ def sample_tickets():
     ]
 
 
+@patch("mava_sync.test_mava_auth")
 @patch("mava_sync.get_supabase_client")
-def test_health_check_success(mock_get_client):
+def test_health_check_success(mock_get_client, mock_test_auth):
     """Test successful health check"""
     mock_supabase = Mock()
     mock_get_client.return_value = mock_supabase
     mock_supabase.table.return_value.select.return_value.limit.return_value.execute.return_value = (
         Mock()
     )
+    mock_test_auth.return_value = True
 
     result = health_check()
 
@@ -61,12 +63,14 @@ def test_health_check_success(mock_get_client):
     mock_supabase.table.assert_called_once_with("tickets")
 
 
+@patch("mava_sync.test_mava_auth")
 @patch("mava_sync.get_supabase_client")
-def test_health_check_failure(mock_get_client):
+def test_health_check_failure(mock_get_client, mock_test_auth):
     """Test failed health check"""
     mock_supabase = Mock()
     mock_get_client.return_value = mock_supabase
     mock_supabase.table.side_effect = Exception("Connection error")
+    mock_test_auth.return_value = True
 
     result = health_check()
 
@@ -76,6 +80,7 @@ def test_health_check_failure(mock_get_client):
 def test_fetch_page_success(mock_session, sample_tickets):
     """Test successful API page fetch"""
     mock_response = Mock()
+    mock_response.status_code = 200
     mock_response.json.return_value = {"tickets": sample_tickets}
     mock_response.raise_for_status.return_value = None
     mock_session.get.return_value = mock_response
@@ -89,6 +94,7 @@ def test_fetch_page_success(mock_session, sample_tickets):
 def test_fetch_page_with_data_field(mock_session, sample_tickets):
     """Test API page fetch with 'data' field"""
     mock_response = Mock()
+    mock_response.status_code = 200
     mock_response.json.return_value = {"data": sample_tickets}
     mock_response.raise_for_status.return_value = None
     mock_session.get.return_value = mock_response
@@ -101,6 +107,7 @@ def test_fetch_page_with_data_field(mock_session, sample_tickets):
 def test_fetch_page_direct_array(mock_session, sample_tickets):
     """Test API page fetch with direct array response"""
     mock_response = Mock()
+    mock_response.status_code = 200
     mock_response.json.return_value = sample_tickets
     mock_response.raise_for_status.return_value = None
     mock_session.get.return_value = mock_response

@@ -222,12 +222,47 @@ def transform_customer_attributes(
 # ───────── core sync functions ─────────
 
 
+def test_mava_auth() -> bool:
+    """Test Mava API authentication."""
+    try:
+        session = requests.Session()
+        headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
+
+        # Make a minimal request to test authentication
+        r = session.get(MAVA_API_URL, params={"limit": 1}, headers=headers, timeout=10)
+
+        if r.status_code == 200:
+            logger.info("Mava API authentication successful")
+            return True
+        elif r.status_code == 401:
+            logger.error("Mava API authentication failed: Invalid or expired token")
+            logger.error("Please check your MAVA_AUTH_TOKEN environment variable")
+            return False
+        elif r.status_code == 403:
+            logger.error("Mava API access forbidden: Insufficient permissions")
+            return False
+        else:
+            logger.error("Mava API test failed with status code: %d", r.status_code)
+            return False
+
+    except Exception as e:
+        logger.error("Mava API authentication test failed: %s", e)
+        return False
+
+
 def health_check() -> bool:
     """Basic health check to verify API connectivity."""
     try:
         # Test Supabase connection with main tables
         supabase = get_supabase_client()
         supabase.table("tickets").select("id").limit(1).execute()
+        logger.info("Supabase health check passed")
+
+        # Test Mava API authentication
+        if not test_mava_auth():
+            logger.error("Mava API health check failed")
+            return False
+
         logger.info("Health check passed")
         return True
     except Exception as e:
@@ -247,10 +282,66 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
 
     headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
 
-    r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
-    r.raise_for_status()
+    # Log request details for debugging (without exposing the full token)
+    if MAVA_AUTH_TOKEN:
+        token_preview = (
+            MAVA_AUTH_TOKEN[:8] + "..." if len(MAVA_AUTH_TOKEN) > 8 else "***"
+        )
+    else:
+        token_preview = "***"
+    logger.debug("Making API request to %s with token: %s", MAVA_API_URL, token_preview)
+    logger.debug("Request params: %s", params)
 
-    data = r.json()
+    try:
+        r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
+
+        # Handle different HTTP status codes with specific error messages
+        if r.status_code == 401:
+            logger.error("Authentication failed (401 Unauthorized)")
+            logger.error("Please check your MAVA_AUTH_TOKEN environment variable")
+            logger.error("Token preview: %s", token_preview)
+            logger.error("Response body: %s", r.text)
+            raise requests.exceptions.HTTPError(
+                "401 Client Error: Unauthorized - Invalid or expired authentication token"
+            )
+        elif r.status_code == 403:
+            logger.error("Access forbidden (403 Forbidden)")
+            logger.error("The token may not have sufficient permissions")
+            logger.error("Response body: %s", r.text)
+            raise requests.exceptions.HTTPError(
+                "403 Client Error: Forbidden - Insufficient permissions"
+            )
+        elif r.status_code == 429:
+            logger.error("Rate limit exceeded (429 Too Many Requests)")
+            logger.error("Response body: %s", r.text)
+            raise requests.exceptions.HTTPError(
+                "429 Client Error: Too Many Requests - Rate limit exceeded"
+            )
+        elif r.status_code >= 500:
+            logger.error("Server error (%d)", r.status_code)
+            logger.error("Response body: %s", r.text)
+            raise requests.exceptions.HTTPError(
+                f"{r.status_code} Server Error: {r.reason}"
+            )
+
+        r.raise_for_status()
+
+    except requests.exceptions.Timeout:
+        logger.error("Request timeout after 30 seconds")
+        raise
+    except requests.exceptions.ConnectionError as e:
+        logger.error("Connection error: %s", e)
+        raise
+    except requests.exceptions.RequestException as e:
+        logger.error("Request failed: %s", e)
+        raise
+
+    try:
+        data = r.json()
+    except ValueError as e:
+        logger.error("Failed to parse JSON response: %s", e)
+        logger.error("Response content: %s", r.text)
+        raise
 
     # Handle different response formats from Mava API
     if isinstance(data, dict) and "tickets" in data:
@@ -260,6 +351,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     else:
         tickets = data.get("tickets") or data.get("data") or []
 
+    logger.debug("Received %d tickets from API", len(tickets))
     return tickets
 
 
