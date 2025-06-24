@@ -229,7 +229,7 @@ def test_mava_auth() -> bool:
     """Test Mava API authentication."""
     try:
         session = requests.Session()
-        headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
+        headers = {"X-Auth-Token": MAVA_AUTH_TOKEN}
 
         # Use the same parameters as fetch_page to avoid 400 errors
         params: dict[str, str | int] = {
@@ -303,7 +303,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         "skipEmptyMessages": "true",
     }
 
-    headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
+    headers = {"X-Auth-Token": MAVA_AUTH_TOKEN}
 
     # Log request details for debugging (without exposing the full token)
     if MAVA_AUTH_TOKEN:
