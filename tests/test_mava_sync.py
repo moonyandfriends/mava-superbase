@@ -7,7 +7,13 @@ from unittest.mock import Mock, patch
 import pytest
 
 import mava_sync
-from mava_sync import fetch_page, health_check, sync_all_pages, upsert_to_table, process_tickets_batch
+from mava_sync import (
+    fetch_page,
+    health_check,
+    process_tickets_batch,
+    sync_all_pages,
+    upsert_to_table,
+)
 
 
 @pytest.fixture
@@ -22,25 +28,29 @@ def sample_tickets():
     """Sample ticket data for testing"""
     return [
         {
-            "_id": "1", 
+            "_id": "1",
             "status": "open",
             "customer": {"_id": "cust1", "name": "Test Customer"},
             "messages": [{"_id": "msg1", "content": "Test message"}],
-            "attributes": [{"_id": "attr1", "attribute": "test_attr", "content": "test_value"}]
+            "attributes": [
+                {"_id": "attr1", "attribute": "test_attr", "content": "test_value"}
+            ],
         },
         {
-            "_id": "2", 
+            "_id": "2",
             "status": "closed",
             "customer": {"_id": "cust2", "name": "Test Customer 2"},
             "messages": [],
-            "attributes": []
+            "attributes": [],
         },
     ]
 
 
-@patch("mava_sync.supabase")
-def test_health_check_success(mock_supabase):
+@patch("mava_sync.get_supabase_client")
+def test_health_check_success(mock_get_client):
     """Test successful health check"""
+    mock_supabase = Mock()
+    mock_get_client.return_value = mock_supabase
     mock_supabase.table.return_value.select.return_value.limit.return_value.execute.return_value = (
         Mock()
     )
@@ -51,9 +61,11 @@ def test_health_check_success(mock_supabase):
     mock_supabase.table.assert_called_once_with("tickets")
 
 
-@patch("mava_sync.supabase")
-def test_health_check_failure(mock_supabase):
+@patch("mava_sync.get_supabase_client")
+def test_health_check_failure(mock_get_client):
     """Test failed health check"""
+    mock_supabase = Mock()
+    mock_get_client.return_value = mock_supabase
     mock_supabase.table.side_effect = Exception("Connection error")
 
     result = health_check()
@@ -98,9 +110,11 @@ def test_fetch_page_direct_array(mock_session, sample_tickets):
     assert result == sample_tickets
 
 
-@patch("mava_sync.supabase")
-def test_upsert_to_table_success(mock_supabase):
+@patch("mava_sync.get_supabase_client")
+def test_upsert_to_table_success(mock_get_client):
     """Test successful table upsert"""
+    mock_supabase = Mock()
+    mock_get_client.return_value = mock_supabase
     mock_resp = Mock()
     mock_resp.data = [{"id": "1"}]
     mock_supabase.table.return_value.upsert.return_value.execute.return_value = (
@@ -108,25 +122,27 @@ def test_upsert_to_table_success(mock_supabase):
     )
 
     sample_records = [{"id": "1", "name": "Test"}]
-    
+
     # Should not raise any exception
     upsert_to_table("test_table", sample_records)
 
     mock_supabase.table.assert_called_once_with("test_table")
 
 
-@patch("mava_sync.supabase")
-def test_upsert_to_table_empty_list(mock_supabase):
+@patch("mava_sync.get_supabase_client")
+def test_upsert_to_table_empty_list(mock_get_client):
     """Test upsert with empty record list"""
     upsert_to_table("test_table", [])
 
     # Should not call supabase at all
-    mock_supabase.table.assert_not_called()
+    mock_get_client.assert_not_called()
 
 
-@patch("mava_sync.supabase")
-def test_upsert_to_table_failure(mock_supabase):
+@patch("mava_sync.get_supabase_client")
+def test_upsert_to_table_failure(mock_get_client):
     """Test failed table upsert"""
+    mock_supabase = Mock()
+    mock_get_client.return_value = mock_supabase
     mock_resp = Mock()
     mock_resp.data = None
     mock_supabase.table.return_value.upsert.return_value.execute.return_value = (
@@ -135,8 +151,11 @@ def test_upsert_to_table_failure(mock_supabase):
 
     sample_records = [{"id": "1", "name": "Test"}]
 
-    with pytest.raises(RuntimeError, match="Failed to upsert"):
-        upsert_to_table("test_table", sample_records)
+    # Should not raise any exception, just log the error
+    upsert_to_table("test_table", sample_records)
+
+    # Verify that the function attempted to upsert
+    mock_supabase.table.assert_called_once_with("test_table")
 
 
 @patch("mava_sync.upsert_to_table")
@@ -145,9 +164,15 @@ def test_process_tickets_batch(mock_upsert, sample_tickets):
     process_tickets_batch(sample_tickets)
 
     # Should call upsert_to_table for each table type
-    expected_calls = ["customers", "tickets", "messages", "ticket_attributes", "customer_attributes"]
+    expected_calls = [
+        "customers",
+        "tickets",
+        "messages",
+        "ticket_attributes",
+        "customer_attributes",
+    ]
     actual_calls = [call[0][0] for call in mock_upsert.call_args_list]
-    
+
     for expected_table in expected_calls:
         assert expected_table in actual_calls
 

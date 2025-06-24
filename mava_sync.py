@@ -62,7 +62,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# Lazy Supabase client creation to avoid import-time failures in tests
+_supabase_client: Client | None = None
+
+
+def get_supabase_client() -> Client:
+    """Get or create the Supabase client."""
+    global _supabase_client
+    if _supabase_client is None:
+        # We know these are not None due to the validation above
+        assert SUPABASE_URL is not None
+        assert SUPABASE_SERVICE_KEY is not None
+        _supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    return _supabase_client
+
 
 # ───────── data transformation helpers ─────────
 
@@ -213,6 +226,7 @@ def health_check() -> bool:
     """Basic health check to verify API connectivity."""
     try:
         # Test Supabase connection with main tables
+        supabase = get_supabase_client()
         supabase.table("tickets").select("id").limit(1).execute()
         logger.info("Health check passed")
         return True
@@ -257,6 +271,7 @@ def upsert_to_table(
         return
 
     try:
+        supabase = get_supabase_client()
         resp = (
             supabase.table(table_name)
             .upsert(records, on_conflict=conflict_column, ignore_duplicates=False)
