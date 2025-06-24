@@ -100,7 +100,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     else:
         # Object response with tickets in a nested field
         tickets = data.get("tickets") or data.get("data") or []
-    
+
     return tickets
 
 
