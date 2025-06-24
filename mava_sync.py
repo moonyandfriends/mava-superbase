@@ -232,7 +232,7 @@ def test_mava_auth() -> bool:
         headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
 
         # Use the same parameters as fetch_page to avoid 400 errors
-        params = {
+        params: dict[str, str | int] = {
             "limit": 10,  # API requires limit >= 10
             "skip": 0,
             "sort": "LAST_MODIFIED",
@@ -247,7 +247,9 @@ def test_mava_auth() -> bool:
             logger.info("Mava API authentication successful")
             return True
         elif r.status_code == 400:
-            logger.error("Mava API bad request (400): Invalid parameters or request format")
+            logger.error(
+                "Mava API bad request (400): Invalid parameters or request format"
+            )
             logger.error("Response body: %s", r.text)
             logger.error("Request URL: %s", r.url)
             logger.error("Request headers: %s", dict(r.request.headers))
