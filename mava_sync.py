@@ -228,8 +228,17 @@ def test_mava_auth() -> bool:
         session = requests.Session()
         headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
 
+        # Use the same parameters as fetch_page to avoid 400 errors
+        params = {
+            "limit": 1,
+            "skip": 0,
+            "sort": "LAST_MODIFIED",
+            "order": "DESCENDING",
+            "skipEmptyMessages": "true",
+        }
+
         # Make a minimal request to test authentication
-        r = session.get(MAVA_API_URL, params={"limit": 1}, headers=headers, timeout=10)
+        r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=10)
 
         if r.status_code == 200:
             logger.info("Mava API authentication successful")
