@@ -185,7 +185,7 @@ def transform_ticket_attributes(ticket_data: dict[str, Any]) -> list[dict[str, A
 
 
 def transform_customer_attributes(
-    customer_data: dict[str, Any]
+    customer_data: dict[str, Any],
 ) -> list[dict[str, Any]]:
     """Transform customer attributes for the customer_attributes table."""
     customer_id = customer_data.get("_id")
