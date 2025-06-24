@@ -345,6 +345,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         elif r.status_code == 429:
             logger.error("Rate limit exceeded (429 Too Many Requests)")
             logger.error("Response body: %s", r.text)
+            logger.error("Consider increasing delays between requests or reducing PAGE_SIZE")
             raise requests.exceptions.HTTPError(
                 "429 Client Error: Too Many Requests - Rate limit exceeded"
             )
@@ -374,15 +375,42 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         logger.error("Response content: %s", r.text)
         raise
 
-    # Handle different response formats from Mava API
-    if isinstance(data, dict) and "tickets" in data:
-        tickets: list[dict[str, Any]] = data["tickets"]
+    # Enhanced response format handling with better logging
+    tickets: list[dict[str, Any]] = []
+    
+    if isinstance(data, dict):
+        if "tickets" in data:
+            tickets = data["tickets"]
+            logger.debug("Found tickets in 'tickets' field")
+        elif "data" in data:
+            tickets = data["data"]
+            logger.debug("Found tickets in 'data' field")
+        else:
+            logger.warning("Unexpected response structure. Available keys: %s", list(data.keys()))
+            # Try to find tickets in any array field
+            for key, value in data.items():
+                if isinstance(value, list) and value and isinstance(value[0], dict):
+                    if "_id" in value[0]:  # Likely tickets
+                        tickets = value
+                        logger.debug("Found tickets in '%s' field", key)
+                        break
     elif isinstance(data, list):
         tickets = data
+        logger.debug("Response is direct array of tickets")
     else:
-        tickets = data.get("tickets") or data.get("data") or []
+        logger.error("Unexpected response type: %s", type(data))
+        logger.error("Response data: %s", data)
 
-    logger.debug("Received %d tickets from API", len(tickets))
+    logger.debug("Received %d tickets from API (skip=%d)", len(tickets), skip)
+    
+    # Log response headers for debugging
+    logger.debug("Response headers: %s", dict(r.headers))
+    
+    # Check for pagination hints in headers
+    if "X-Total-Count" in r.headers:
+        total_count = r.headers["X-Total-Count"]
+        logger.info("API indicates total count: %s", total_count)
+    
     return tickets
 
 
@@ -478,16 +506,43 @@ def process_tickets_batch(tickets: list[dict[str, Any]]) -> None:
 def sync_all_pages() -> None:
     """Sync all pages of tickets from Mava to Supabase."""
     logger.info("Starting Mava → Supabase sync (multi-table mode)")
+    logger.info("Page size: %d", PAGE_SIZE)
+    
     session = requests.Session()
     skip = 0
     total_tickets = 0
+    page_count = 0
+    consecutive_empty_pages = 0
+    max_consecutive_empty = 3  # Stop after 3 consecutive empty pages
 
     while True:
+        page_count += 1
+        logger.info("Fetching page %d (skip=%d, total_tickets=%d)", page_count, skip, total_tickets)
+        
         try:
             page = fetch_page(session, skip)
-        except Exception:
-            logger.exception("API request failed at skip=%d", skip)
+        except Exception as e:
+            logger.exception("API request failed at skip=%d, page=%d", skip, page_count)
+            logger.error("Stopping sync due to API error. Total tickets processed: %d", total_tickets)
             raise
+
+        if not page:
+            consecutive_empty_pages += 1
+            logger.warning("Empty page received (consecutive empty pages: %d/%d)", 
+                         consecutive_empty_pages, max_consecutive_empty)
+            
+            if consecutive_empty_pages >= max_consecutive_empty:
+                logger.info("Stopping sync after %d consecutive empty pages", max_consecutive_empty)
+                break
+        else:
+            consecutive_empty_pages = 0  # Reset counter on successful page
+            logger.info("Received %d tickets on page %d", len(page), page_count)
+            
+            # Log first and last ticket IDs for debugging
+            if page:
+                first_ticket_id = page[0].get("_id", "unknown")
+                last_ticket_id = page[-1].get("_id", "unknown")
+                logger.debug("Page %d ticket range: %s to %s", page_count, first_ticket_id, last_ticket_id)
 
         if not page:
             break
@@ -495,8 +550,24 @@ def sync_all_pages() -> None:
         process_tickets_batch(page)
         total_tickets += len(page)
         skip += PAGE_SIZE
+        
+        # Add a small delay to avoid rate limiting
+        import time
+        time.sleep(0.1)
 
-    logger.info("Sync complete — %d tickets processed across all tables", total_tickets)
+    logger.info("Sync complete — %d tickets processed across %d pages", total_tickets, page_count)
+    
+    # Log final statistics
+    if total_tickets > 0:
+        logger.info("Average tickets per page: %.1f", total_tickets / page_count)
+    
+    # Warn if we got suspiciously few tickets
+    if total_tickets < 1000 and page_count < 20:
+        logger.warning("Low ticket count detected. This might indicate:")
+        logger.warning("1. API rate limiting")
+        logger.warning("2. Authentication issues")
+        logger.warning("3. API response format changes")
+        logger.warning("4. Network connectivity issues")
 
 
 if __name__ == "__main__":
