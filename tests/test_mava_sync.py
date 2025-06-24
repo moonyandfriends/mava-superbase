@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 import mava_sync
-from mava_sync import fetch_page, health_check, sync_all_pages, upsert_tickets
+from mava_sync import fetch_page, health_check, sync_all_pages, upsert_to_table, process_tickets_batch
 
 
 @pytest.fixture
@@ -21,8 +21,20 @@ def mock_session():
 def sample_tickets():
     """Sample ticket data for testing"""
     return [
-        {"id": "1", "title": "Test Ticket 1", "status": "open"},
-        {"id": "2", "title": "Test Ticket 2", "status": "closed"},
+        {
+            "_id": "1", 
+            "status": "open",
+            "customer": {"_id": "cust1", "name": "Test Customer"},
+            "messages": [{"_id": "msg1", "content": "Test message"}],
+            "attributes": [{"_id": "attr1", "attribute": "test_attr", "content": "test_value"}]
+        },
+        {
+            "_id": "2", 
+            "status": "closed",
+            "customer": {"_id": "cust2", "name": "Test Customer 2"},
+            "messages": [],
+            "attributes": []
+        },
     ]
 
 
@@ -87,46 +99,63 @@ def test_fetch_page_direct_array(mock_session, sample_tickets):
 
 
 @patch("mava_sync.supabase")
-def test_upsert_tickets_success(mock_supabase, sample_tickets):
-    """Test successful ticket upsert"""
+def test_upsert_to_table_success(mock_supabase):
+    """Test successful table upsert"""
     mock_resp = Mock()
-    mock_resp.data = sample_tickets
+    mock_resp.data = [{"id": "1"}]
     mock_supabase.table.return_value.upsert.return_value.execute.return_value = (
         mock_resp
     )
 
+    sample_records = [{"id": "1", "name": "Test"}]
+    
     # Should not raise any exception
-    upsert_tickets(sample_tickets)
+    upsert_to_table("test_table", sample_records)
 
-    mock_supabase.table.assert_called_once_with("tickets")
+    mock_supabase.table.assert_called_once_with("test_table")
 
 
 @patch("mava_sync.supabase")
-def test_upsert_tickets_empty_list(mock_supabase):
-    """Test upsert with empty ticket list"""
-    upsert_tickets([])
+def test_upsert_to_table_empty_list(mock_supabase):
+    """Test upsert with empty record list"""
+    upsert_to_table("test_table", [])
 
     # Should not call supabase at all
     mock_supabase.table.assert_not_called()
 
 
 @patch("mava_sync.supabase")
-def test_upsert_tickets_failure(mock_supabase, sample_tickets):
-    """Test failed ticket upsert"""
+def test_upsert_to_table_failure(mock_supabase):
+    """Test failed table upsert"""
     mock_resp = Mock()
     mock_resp.data = None
     mock_supabase.table.return_value.upsert.return_value.execute.return_value = (
         mock_resp
     )
 
-    with pytest.raises(RuntimeError, match="Supabase upsert failed"):
-        upsert_tickets(sample_tickets)
+    sample_records = [{"id": "1", "name": "Test"}]
+
+    with pytest.raises(RuntimeError, match="Failed to upsert"):
+        upsert_to_table("test_table", sample_records)
+
+
+@patch("mava_sync.upsert_to_table")
+def test_process_tickets_batch(mock_upsert, sample_tickets):
+    """Test ticket batch processing"""
+    process_tickets_batch(sample_tickets)
+
+    # Should call upsert_to_table for each table type
+    expected_calls = ["customers", "tickets", "messages", "ticket_attributes", "customer_attributes"]
+    actual_calls = [call[0][0] for call in mock_upsert.call_args_list]
+    
+    for expected_table in expected_calls:
+        assert expected_table in actual_calls
 
 
 @patch("mava_sync.fetch_page")
-@patch("mava_sync.upsert_tickets")
+@patch("mava_sync.process_tickets_batch")
 @patch("requests.Session")
-def test_sync_all_pages(mock_session_class, mock_upsert, mock_fetch, sample_tickets):
+def test_sync_all_pages(mock_session_class, mock_process, mock_fetch, sample_tickets):
     """Test complete sync process"""
     mock_session = Mock()
     mock_session_class.return_value = mock_session
@@ -137,7 +166,7 @@ def test_sync_all_pages(mock_session_class, mock_upsert, mock_fetch, sample_tick
     sync_all_pages()
 
     assert mock_fetch.call_count == 2
-    mock_upsert.assert_called_once_with(sample_tickets)
+    mock_process.assert_called_once_with(sample_tickets)
 
 
 @pytest.fixture(autouse=True)
