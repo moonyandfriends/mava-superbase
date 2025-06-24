@@ -126,9 +126,7 @@ def transform_ticket(ticket_data: dict[str, Any]) -> dict[str, Any]:
         # AI and automation
         "ai_status": ticket_data.get("aiStatus"),
         "is_ai_enabled_in_flow_root": ticket_data.get("isAIEnabledInFlowRoot"),
-        "is_button_in_flow_root_clicked": ticket_data.get(
-            "isButtonInFlowRootClicked"
-        ),
+        "is_button_in_flow_root_clicked": ticket_data.get("isButtonInFlowRootClicked"),
         "force_button_selection": ticket_data.get("forceButtonSelection"),
         # User interaction
         "is_user_rating_requested": ticket_data.get("isUserRatingRequested"),
@@ -138,9 +136,7 @@ def transform_ticket(ticket_data: dict[str, Any]) -> dict[str, Any]:
         "first_customer_message_created_at": ticket_data.get(
             "firstCustomerMessageCreatedAt"
         ),
-        "first_agent_message_created_at": ticket_data.get(
-            "firstAgentMessageCreatedAt"
-        ),
+        "first_agent_message_created_at": ticket_data.get("firstAgentMessageCreatedAt"),
         # Tags (stored as array)
         "tags": ticket_data.get("tags", []),
         # System fields
@@ -522,7 +518,9 @@ def sync_all_pages() -> None:
         time.sleep(0.1)
 
     logger.info(
-        "Sync complete — %d tickets processed across %d pages", total_tickets, page_count
+        "Sync complete — %d tickets processed across %d pages",
+        total_tickets,
+        page_count,
     )
 
     # Log final statistics
