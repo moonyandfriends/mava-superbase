@@ -234,15 +234,24 @@ def test_mava_auth() -> bool:
         if r.status_code == 200:
             logger.info("Mava API authentication successful")
             return True
+        elif r.status_code == 400:
+            logger.error("Mava API bad request (400): Invalid parameters or request format")
+            logger.error("Response body: %s", r.text)
+            logger.error("Request URL: %s", r.url)
+            logger.error("Request headers: %s", dict(r.request.headers))
+            return False
         elif r.status_code == 401:
             logger.error("Mava API authentication failed: Invalid or expired token")
             logger.error("Please check your MAVA_AUTH_TOKEN environment variable")
+            logger.error("Response body: %s", r.text)
             return False
         elif r.status_code == 403:
             logger.error("Mava API access forbidden: Insufficient permissions")
+            logger.error("Response body: %s", r.text)
             return False
         else:
             logger.error("Mava API test failed with status code: %d", r.status_code)
+            logger.error("Response body: %s", r.text)
             return False
 
     except Exception as e:
@@ -296,7 +305,15 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
 
         # Handle different HTTP status codes with specific error messages
-        if r.status_code == 401:
+        if r.status_code == 400:
+            logger.error("Bad request (400): Invalid parameters or request format")
+            logger.error("Request URL: %s", r.url)
+            logger.error("Request params: %s", params)
+            logger.error("Response body: %s", r.text)
+            raise requests.exceptions.HTTPError(
+                "400 Client Error: Bad Request - Invalid parameters or request format"
+            )
+        elif r.status_code == 401:
             logger.error("Authentication failed (401 Unauthorized)")
             logger.error("Please check your MAVA_AUTH_TOKEN environment variable")
             logger.error("Token preview: %s", token_preview)
