@@ -29,6 +29,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from datetime import datetime
 from typing import Any
 
@@ -125,7 +126,9 @@ def transform_ticket(ticket_data: dict[str, Any]) -> dict[str, Any]:
         # AI and automation
         "ai_status": ticket_data.get("aiStatus"),
         "is_ai_enabled_in_flow_root": ticket_data.get("isAIEnabledInFlowRoot"),
-        "is_button_in_flow_root_clicked": ticket_data.get("isButtonInFlowRootClicked"),
+        "is_button_in_flow_root_clicked": ticket_data.get(
+            "isButtonInFlowRootClicked"
+        ),
         "force_button_selection": ticket_data.get("forceButtonSelection"),
         # User interaction
         "is_user_rating_requested": ticket_data.get("isUserRatingRequested"),
@@ -135,7 +138,9 @@ def transform_ticket(ticket_data: dict[str, Any]) -> dict[str, Any]:
         "first_customer_message_created_at": ticket_data.get(
             "firstCustomerMessageCreatedAt"
         ),
-        "first_agent_message_created_at": ticket_data.get("firstAgentMessageCreatedAt"),
+        "first_agent_message_created_at": ticket_data.get(
+            "firstAgentMessageCreatedAt"
+        ),
         # Tags (stored as array)
         "tags": ticket_data.get("tags", []),
         # System fields
@@ -222,171 +227,114 @@ def transform_customer_attributes(
     return transformed_attributes
 
 
-# ───────── core sync functions ─────────
+# ───────── API interaction ─────────
 
 
 def test_mava_auth() -> bool:
-    """Test Mava API authentication."""
+    """Test Mava API authentication with a minimal request."""
     try:
-        session = requests.Session()
-        headers = {"X-Auth-Token": MAVA_AUTH_TOKEN}
-
-        # Use the same parameters as fetch_page to avoid 400 errors
-        params: dict[str, str | int] = {
-            "limit": 10,  # API requires limit >= 10
-            "skip": 0,
-            "sort": "LAST_MODIFIED",
-            "order": "DESCENDING",
-            "skipEmptyMessages": "true",
+        headers = {
+            "Authorization": f"Bearer {MAVA_AUTH_TOKEN}",
+            "Content-Type": "application/json",
         }
 
-        # Make a minimal request to test authentication
-        r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=10)
+        # Make a minimal request to test auth
+        response = requests.get(
+            MAVA_API_URL,
+            headers=headers,
+            params={"limit": 1, "skip": 0},
+            timeout=10,
+        )
 
-        if r.status_code == 200:
+        if response.status_code == 200:
             logger.info("Mava API authentication successful")
             return True
-        elif r.status_code == 400:
-            logger.error(
-                "Mava API bad request (400): Invalid parameters or request format"
-            )
-            logger.error("Response body: %s", r.text)
-            logger.error("Request URL: %s", r.url)
-            logger.error("Request headers: %s", dict(r.request.headers))
+        elif response.status_code == 401:
+            logger.error("Mava API authentication failed: 401 Unauthorized")
             return False
-        elif r.status_code == 401:
-            logger.error("Mava API authentication failed: Invalid or expired token")
-            logger.error("Please check your MAVA_AUTH_TOKEN environment variable")
-            logger.error("Response body: %s", r.text)
-            return False
-        elif r.status_code == 403:
-            logger.error("Mava API access forbidden: Insufficient permissions")
-            logger.error("Response body: %s", r.text)
+        elif response.status_code == 403:
+            logger.error("Mava API authentication failed: 403 Forbidden")
             return False
         else:
-            logger.error("Mava API test failed with status code: %d", r.status_code)
-            logger.error("Response body: %s", r.text)
+            logger.error(
+                "Mava API authentication test failed: %d %s",
+                response.status_code,
+                response.text,
+            )
             return False
 
-    except Exception as e:
-        logger.error("Mava API authentication test failed: %s", e)
+    except requests.exceptions.RequestException as e:
+        logger.error("Mava API connection failed: %s", e)
         return False
 
 
 def health_check() -> bool:
-    """Basic health check to verify API connectivity."""
-    try:
-        # Test Supabase connection with main tables
-        supabase = get_supabase_client()
-        supabase.table("tickets").select("id").limit(1).execute()
-        logger.info("Supabase health check passed")
+    """Perform health checks for all dependencies."""
+    logger.info("Performing health checks...")
 
-        # Test Mava API authentication
-        if not test_mava_auth():
-            logger.error("Mava API health check failed")
-            return False
-
-        logger.info("Health check passed")
-        return True
-    except Exception as e:
-        logger.error("Health check failed: %s", e)
+    # Test Mava API authentication
+    if not test_mava_auth():
+        logger.error("Mava API health check failed")
         return False
+
+    # Test Supabase connection
+    try:
+        supabase = get_supabase_client()
+        # Try a simple query to test connection
+        response = supabase.table("tickets").select("id").limit(1).execute()
+        logger.info("Supabase health check successful")
+    except Exception as e:
+        logger.error("Supabase health check failed: %s", e)
+        return False
+
+    logger.info("All health checks passed")
+    return True
 
 
 def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
-    """Return a single page of tickets from the Mava API."""
-    params: dict[str, str | int] = {
-        "limit": PAGE_SIZE,
-        "skip": skip,
-        "sort": "LAST_MODIFIED",
-        "order": "DESCENDING",
-        "skipEmptyMessages": "true",
+    """Fetch a single page of tickets from the Mava API."""
+    headers = {
+        "Authorization": f"Bearer {MAVA_AUTH_TOKEN}",
+        "Content-Type": "application/json",
     }
 
-    headers = {"X-Auth-Token": MAVA_AUTH_TOKEN}
+    params = {
+        "limit": PAGE_SIZE,
+        "skip": skip,
+    }
 
-    # Log request details for debugging (without exposing the full token)
-    if MAVA_AUTH_TOKEN:
-        token_preview = (
-            MAVA_AUTH_TOKEN[:8] + "..." if len(MAVA_AUTH_TOKEN) > 8 else "***"
-        )
-    else:
-        token_preview = "***"
-    logger.debug("Making API request to %s with token: %s", MAVA_API_URL, token_preview)
-    logger.debug("Request params: %s", params)
+    logger.debug("Fetching page: skip=%d, limit=%d", skip, PAGE_SIZE)
 
     try:
-        r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
-
-        # Handle different HTTP status codes with specific error messages
-        if r.status_code == 400:
-            logger.error("Bad request (400): Invalid parameters or request format")
-            logger.error("Request URL: %s", r.url)
-            logger.error("Request params: %s", params)
-            logger.error("Response body: %s", r.text)
-            raise requests.exceptions.HTTPError(
-                "400 Client Error: Bad Request - Invalid parameters or request format"
-            )
-        elif r.status_code == 401:
-            logger.error("Authentication failed (401 Unauthorized)")
-            logger.error("Please check your MAVA_AUTH_TOKEN environment variable")
-            logger.error("Token preview: %s", token_preview)
-            logger.error("Response body: %s", r.text)
-            raise requests.exceptions.HTTPError(
-                "401 Client Error: Unauthorized - Invalid or expired authentication token"
-            )
-        elif r.status_code == 403:
-            logger.error("Access forbidden (403 Forbidden)")
-            logger.error("The token may not have sufficient permissions")
-            logger.error("Response body: %s", r.text)
-            raise requests.exceptions.HTTPError(
-                "403 Client Error: Forbidden - Insufficient permissions"
-            )
-        elif r.status_code == 429:
-            logger.error("Rate limit exceeded (429 Too Many Requests)")
-            logger.error("Response body: %s", r.text)
-            logger.error("Consider increasing delays between requests or reducing PAGE_SIZE")
-            raise requests.exceptions.HTTPError(
-                "429 Client Error: Too Many Requests - Rate limit exceeded"
-            )
-        elif r.status_code >= 500:
-            logger.error("Server error (%d)", r.status_code)
-            logger.error("Response body: %s", r.text)
-            raise requests.exceptions.HTTPError(
-                f"{r.status_code} Server Error: {r.reason}"
-            )
-
+        r = session.get(MAVA_API_URL, headers=headers, params=params, timeout=30)
         r.raise_for_status()
-
-    except requests.exceptions.Timeout:
-        logger.error("Request timeout after 30 seconds")
-        raise
-    except requests.exceptions.ConnectionError as e:
-        logger.error("Connection error: %s", e)
-        raise
     except requests.exceptions.RequestException as e:
-        logger.error("Request failed: %s", e)
+        logger.error("API request failed: %s", e)
         raise
 
     try:
         data = r.json()
     except ValueError as e:
         logger.error("Failed to parse JSON response: %s", e)
-        logger.error("Response content: %s", r.text)
+        logger.error("Response text: %s", r.text[:500])
         raise
 
-    # Enhanced response format handling with better logging
-    tickets: list[dict[str, Any]] = []
-
+    # Handle different response structures
+    tickets = []
     if isinstance(data, dict):
-        if "tickets" in data:
-            tickets = data["tickets"]
-            logger.debug("Found tickets in 'tickets' field")
-        elif "data" in data:
+        if "data" in data:
             tickets = data["data"]
             logger.debug("Found tickets in 'data' field")
+        elif "tickets" in data:
+            tickets = data["tickets"]
+            logger.debug("Found tickets in 'tickets' field")
+        elif "results" in data:
+            tickets = data["results"]
+            logger.debug("Found tickets in 'results' field")
         else:
-            logger.warning("Unexpected response structure. Available keys: %s", list(data.keys()))
+            logger.warning(
+                "Unexpected response structure. Available keys: %s", list(data.keys())
+            )
             # Try to find tickets in any array field
             for key, value in data.items():
                 if isinstance(value, list) and value and isinstance(value[0], dict):
@@ -517,22 +465,36 @@ def sync_all_pages() -> None:
 
     while True:
         page_count += 1
-        logger.info("Fetching page %d (skip=%d, total_tickets=%d)", page_count, skip, total_tickets)
+        logger.info(
+            "Fetching page %d (skip=%d, total_tickets=%d)",
+            page_count,
+            skip,
+            total_tickets,
+        )
 
         try:
             page = fetch_page(session, skip)
         except Exception:
             logger.exception("API request failed at skip=%d, page=%d", skip, page_count)
-            logger.error("Stopping sync due to API error. Total tickets processed: %d", total_tickets)
+            logger.error(
+                "Stopping sync due to API error. Total tickets processed: %d",
+                total_tickets,
+            )
             raise
 
         if not page:
             consecutive_empty_pages += 1
-            logger.warning("Empty page received (consecutive empty pages: %d/%d)",
-                         consecutive_empty_pages, max_consecutive_empty)
+            logger.warning(
+                "Empty page received (consecutive empty pages: %d/%d)",
+                consecutive_empty_pages,
+                max_consecutive_empty,
+            )
 
             if consecutive_empty_pages >= max_consecutive_empty:
-                logger.info("Stopping sync after %d consecutive empty pages", max_consecutive_empty)
+                logger.info(
+                    "Stopping sync after %d consecutive empty pages",
+                    max_consecutive_empty,
+                )
                 break
         else:
             consecutive_empty_pages = 0  # Reset counter on successful page
@@ -542,7 +504,12 @@ def sync_all_pages() -> None:
             if page:
                 first_ticket_id = page[0].get("_id", "unknown")
                 last_ticket_id = page[-1].get("_id", "unknown")
-                logger.debug("Page %d ticket range: %s to %s", page_count, first_ticket_id, last_ticket_id)
+                logger.debug(
+                    "Page %d ticket range: %s to %s",
+                    page_count,
+                    first_ticket_id,
+                    last_ticket_id,
+                )
 
         if not page:
             break
@@ -552,10 +519,11 @@ def sync_all_pages() -> None:
         skip += PAGE_SIZE
 
         # Add a small delay to avoid rate limiting
-        import time
         time.sleep(0.1)
 
-    logger.info("Sync complete — %d tickets processed across %d pages", total_tickets, page_count)
+    logger.info(
+        "Sync complete — %d tickets processed across %d pages", total_tickets, page_count
+    )
 
     # Log final statistics
     if total_tickets > 0:
@@ -583,4 +551,4 @@ if __name__ == "__main__":
         logger.info("Finished in %.1fs", duration)
     except Exception:
         logger.exception("Uncaught error — sync aborted")
-        sys.exit(1)
+        sys.exit(1) 
