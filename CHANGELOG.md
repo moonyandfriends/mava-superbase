@@ -8,28 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial Mava to Supabase sync functionality
-- Railway deployment configuration
-- Docker containerization support
-- Comprehensive logging and error handling
-- Health check functionality
-- Continuous sync mode for cloud deployment
-- Environment-based configuration
-- Detailed documentation and setup guides
-- Added dev-requirements.txt for development dependencies
-- Added type stubs (types-requests, types-python-dateutil) for better mypy support
+- Multi-table database schema support for comprehensive Mava data storage
+- Normalized data structure with separate tables for customers, tickets, messages, and attributes
+- Enhanced data transformation functions for proper schema mapping
+- Customer deduplication logic to prevent duplicate customer records
+- Support for ticket attributes and customer attributes in separate tables
+- Comprehensive database views for common queries and analytics
+- Raw data preservation in JSONB columns for future schema evolution
+- Foreign key relationships and referential integrity constraints
+- Performance optimizations with strategic indexing
+- Row Level Security (RLS) policies for all tables
+- Detailed schema documentation with field mappings and example queries
 
 ### Changed
-- N/A
+- **BREAKING CHANGE**: Complete rewrite of data storage from single table to normalized multi-table schema
+- Enhanced error handling to continue processing even if individual table upserts fail
+- Improved logging to show progress across all tables
+- Updated README with comprehensive multi-table schema documentation
+- Restructured code with better separation of concerns for data transformation
 
 ### Fixed
-- Fixed pytest module import issues by adding pythonpath configuration
-- Fixed mypy type checking errors by improving type annotations
-- Fixed trailing whitespace and newline issues in test files
-- Updated deprecated GitHub Actions upload-artifact from v3 to v4
+- Fixed type checking error for ticket_id parameter in message processing
 
 ### Removed
-- N/A
+- FLATTEN_MESSAGES environment variable (replaced with always-on multi-table approach)
 
 ## [1.2.0] - 2025-01-27
 
