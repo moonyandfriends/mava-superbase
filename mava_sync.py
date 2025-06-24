@@ -91,7 +91,7 @@ def transform_customer(customer_data: dict[str, Any]) -> dict[str, Any]:
 def transform_ticket(ticket_data: dict[str, Any]) -> dict[str, Any]:
     """Transform ticket data for the tickets table."""
     customer = ticket_data.get("customer", {})
-    
+
     return {
         "id": ticket_data.get("_id"),
         "customer_id": customer.get("_id"),
@@ -101,37 +101,37 @@ def transform_ticket(ticket_data: dict[str, Any]) -> dict[str, Any]:
         "source_type": ticket_data.get("sourceType"),
         "category": ticket_data.get("category"),
         "assigned_to": ticket_data.get("assignedTo"),
-        
+
         # Discord-specific fields
         "discord_thread_id": ticket_data.get("discordThreadId"),
         "interaction_identifier": ticket_data.get("interactionIdentifier"),
         "is_discord_thread_deleted": ticket_data.get("isDiscordThreadDeleted"),
         "discord_users": ticket_data.get("discordUsers", []),
-        
+
         # AI and automation
         "ai_status": ticket_data.get("aiStatus"),
         "is_ai_enabled_in_flow_root": ticket_data.get("isAIEnabledInFlowRoot"),
         "is_button_in_flow_root_clicked": ticket_data.get("isButtonInFlowRootClicked"),
         "force_button_selection": ticket_data.get("forceButtonSelection"),
-        
+
         # User interaction
         "is_user_rating_requested": ticket_data.get("isUserRatingRequested"),
         "is_visible": ticket_data.get("isVisible"),
         "mentions": ticket_data.get("mentions", []),
-        
+
         # Timing information
         "first_customer_message_created_at": ticket_data.get("firstCustomerMessageCreatedAt"),
         "first_agent_message_created_at": ticket_data.get("firstAgentMessageCreatedAt"),
-        
+
         # Tags (stored as array)
         "tags": ticket_data.get("tags", []),
-        
+
         # System fields
         "created_at": ticket_data.get("createdAt"),
         "updated_at": ticket_data.get("updatedAt"),
         "version": ticket_data.get("__v"),
         "disabled": ticket_data.get("disabled", False),
-        
+
         # Raw data preservation
         "raw_data": ticket_data,
     }
@@ -173,7 +173,7 @@ def transform_ticket_attributes(ticket_data: dict[str, Any]) -> list[dict[str, A
     """Transform ticket attributes for the ticket_attributes table."""
     ticket_id = ticket_data.get("_id")
     attributes = ticket_data.get("attributes", [])
-    
+
     transformed_attributes = []
     for attr in attributes:
         transformed_attributes.append({
@@ -183,7 +183,7 @@ def transform_ticket_attributes(ticket_data: dict[str, Any]) -> list[dict[str, A
             "content": attr.get("content"),
             "raw_data": attr,
         })
-    
+
     return transformed_attributes
 
 
@@ -191,7 +191,7 @@ def transform_customer_attributes(customer_data: dict[str, Any]) -> list[dict[st
     """Transform customer attributes for the customer_attributes table."""
     customer_id = customer_data.get("_id")
     attributes = customer_data.get("attributes", [])
-    
+
     transformed_attributes = []
     for attr in attributes:
         transformed_attributes.append({
@@ -201,7 +201,7 @@ def transform_customer_attributes(customer_data: dict[str, Any]) -> list[dict[st
             "content": attr.get("content"),
             "raw_data": attr,
         })
-    
+
     return transformed_attributes
 
 
@@ -252,20 +252,20 @@ def upsert_to_table(table_name: str, records: list[dict[str, Any]], conflict_col
     """Generic upsert function for any table."""
     if not records:
         return
-    
+
     try:
         resp = (
             supabase.table(table_name)
             .upsert(records, on_conflict=conflict_column, ignore_duplicates=False)
             .execute()
         )
-        
+
         if not hasattr(resp, "data") or resp.data is None:
             logger.error("Supabase upsert error for table %s: %s", table_name, resp)
             raise RuntimeError(f"Supabase upsert failed for table {table_name}")
-        
+
         logger.info("Upserted %d records to %s table", len(records), table_name)
-        
+
     except Exception as e:
         logger.error("Failed to upsert to table %s: %s", table_name, e)
         # Don't raise the exception to continue with other tables
@@ -275,17 +275,17 @@ def process_tickets_batch(tickets: list[dict[str, Any]]) -> None:
     """Process a batch of tickets and upsert to all relevant tables."""
     if not tickets:
         return
-    
+
     # Collect data for all tables
     customers_data = []
     tickets_data = []
     messages_data = []
     ticket_attributes_data = []
     customer_attributes_data = []
-    
+
     # Track unique customers to avoid duplicates
     processed_customers = set()
-    
+
     for ticket in tickets:
         # Process customer data
         customer = ticket.get("customer", {})
@@ -294,25 +294,25 @@ def process_tickets_batch(tickets: list[dict[str, Any]]) -> None:
             if customer_id not in processed_customers:
                 customers_data.append(transform_customer(customer))
                 processed_customers.add(customer_id)
-                
+
                 # Customer attributes
                 customer_attrs = transform_customer_attributes(customer)
                 customer_attributes_data.extend(customer_attrs)
-        
+
         # Process ticket data
         tickets_data.append(transform_ticket(ticket))
-        
+
         # Process ticket attributes
         ticket_attrs = transform_ticket_attributes(ticket)
         ticket_attributes_data.extend(ticket_attrs)
-        
+
         # Process messages
         messages = ticket.get("messages", [])
         ticket_id = ticket.get("_id")
         if ticket_id:
             for message in messages:
                 messages_data.append(transform_message(message, ticket_id))
-    
+
     # Upsert to all tables
     # Order matters: customers first, then tickets (which reference customers), then dependent tables
     upsert_to_table("customers", customers_data)
@@ -320,7 +320,7 @@ def process_tickets_batch(tickets: list[dict[str, Any]]) -> None:
     upsert_to_table("messages", messages_data)
     upsert_to_table("ticket_attributes", ticket_attributes_data)
     upsert_to_table("customer_attributes", customer_attributes_data)
-    
+
     logger.info(
         "Processed batch: %d customers, %d tickets, %d messages, %d ticket attrs, %d customer attrs",
         len(customers_data), len(tickets_data), len(messages_data),
