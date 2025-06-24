@@ -101,37 +101,32 @@ def transform_ticket(ticket_data: dict[str, Any]) -> dict[str, Any]:
         "source_type": ticket_data.get("sourceType"),
         "category": ticket_data.get("category"),
         "assigned_to": ticket_data.get("assignedTo"),
-
         # Discord-specific fields
         "discord_thread_id": ticket_data.get("discordThreadId"),
         "interaction_identifier": ticket_data.get("interactionIdentifier"),
         "is_discord_thread_deleted": ticket_data.get("isDiscordThreadDeleted"),
         "discord_users": ticket_data.get("discordUsers", []),
-
         # AI and automation
         "ai_status": ticket_data.get("aiStatus"),
         "is_ai_enabled_in_flow_root": ticket_data.get("isAIEnabledInFlowRoot"),
         "is_button_in_flow_root_clicked": ticket_data.get("isButtonInFlowRootClicked"),
         "force_button_selection": ticket_data.get("forceButtonSelection"),
-
         # User interaction
         "is_user_rating_requested": ticket_data.get("isUserRatingRequested"),
         "is_visible": ticket_data.get("isVisible"),
         "mentions": ticket_data.get("mentions", []),
-
         # Timing information
-        "first_customer_message_created_at": ticket_data.get("firstCustomerMessageCreatedAt"),
+        "first_customer_message_created_at": ticket_data.get(
+            "firstCustomerMessageCreatedAt"
+        ),
         "first_agent_message_created_at": ticket_data.get("firstAgentMessageCreatedAt"),
-
         # Tags (stored as array)
         "tags": ticket_data.get("tags", []),
-
         # System fields
         "created_at": ticket_data.get("createdAt"),
         "updated_at": ticket_data.get("updatedAt"),
         "version": ticket_data.get("__v"),
         "disabled": ticket_data.get("disabled", False),
-
         # Raw data preservation
         "raw_data": ticket_data,
     }
@@ -176,31 +171,37 @@ def transform_ticket_attributes(ticket_data: dict[str, Any]) -> list[dict[str, A
 
     transformed_attributes = []
     for attr in attributes:
-        transformed_attributes.append({
-            "id": attr.get("_id") or attr.get("id"),
-            "ticket_id": ticket_id,
-            "attribute": attr.get("attribute"),
-            "content": attr.get("content"),
-            "raw_data": attr,
-        })
+        transformed_attributes.append(
+            {
+                "id": attr.get("_id") or attr.get("id"),
+                "ticket_id": ticket_id,
+                "attribute": attr.get("attribute"),
+                "content": attr.get("content"),
+                "raw_data": attr,
+            }
+        )
 
     return transformed_attributes
 
 
-def transform_customer_attributes(customer_data: dict[str, Any]) -> list[dict[str, Any]]:
+def transform_customer_attributes(
+    customer_data: dict[str, Any]
+) -> list[dict[str, Any]]:
     """Transform customer attributes for the customer_attributes table."""
     customer_id = customer_data.get("_id")
     attributes = customer_data.get("attributes", [])
 
     transformed_attributes = []
     for attr in attributes:
-        transformed_attributes.append({
-            "id": attr.get("_id") or attr.get("id"),
-            "customer_id": customer_id,
-            "attribute": attr.get("attribute"),
-            "content": attr.get("content"),
-            "raw_data": attr,
-        })
+        transformed_attributes.append(
+            {
+                "id": attr.get("_id") or attr.get("id"),
+                "customer_id": customer_id,
+                "attribute": attr.get("attribute"),
+                "content": attr.get("content"),
+                "raw_data": attr,
+            }
+        )
 
     return transformed_attributes
 
@@ -248,7 +249,9 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     return tickets
 
 
-def upsert_to_table(table_name: str, records: list[dict[str, Any]], conflict_column: str = "id") -> None:
+def upsert_to_table(
+    table_name: str, records: list[dict[str, Any]], conflict_column: str = "id"
+) -> None:
     """Generic upsert function for any table."""
     if not records:
         return
@@ -323,8 +326,11 @@ def process_tickets_batch(tickets: list[dict[str, Any]]) -> None:
 
     logger.info(
         "Processed batch: %d customers, %d tickets, %d messages, %d ticket attrs, %d customer attrs",
-        len(customers_data), len(tickets_data), len(messages_data),
-        len(ticket_attributes_data), len(customer_attributes_data)
+        len(customers_data),
+        len(tickets_data),
+        len(messages_data),
+        len(ticket_attributes_data),
+        len(customer_attributes_data),
     )
 
 
