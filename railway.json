@@ -1,7 +1,8 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
     "cronSchedule": "0 0 * * *",
@@ -11,7 +12,12 @@
     "production": {
       "variables": {
         "LOG_LEVEL": "INFO",
-        "PAGE_SIZE": "50"
+        "PAGE_SIZE": "50",
+        "MAVA_API_KEY": "",
+        "MAVA_BASE_URL": "https://api.mava.com",
+        "SUPABASE_URL": "",
+        "SUPABASE_KEY": "",
+        "SUPABASE_HOST": ""
       }
     }
   }
