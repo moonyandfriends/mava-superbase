@@ -281,7 +281,7 @@ def health_check() -> bool:
     try:
         supabase = get_supabase_client()
         # Try a simple query to test connection
-        response = supabase.table("tickets").select("id").limit(1).execute()
+        supabase.table("tickets").select("id").limit(1).execute()
         logger.info("Supabase health check successful")
     except Exception as e:
         logger.error("Supabase health check failed: %s", e)
@@ -551,4 +551,4 @@ if __name__ == "__main__":
         logger.info("Finished in %.1fs", duration)
     except Exception:
         logger.exception("Uncaught error — sync aborted")
-        sys.exit(1) 
+        sys.exit(1)
