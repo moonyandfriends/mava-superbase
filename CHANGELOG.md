@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added specific logging for request URLs, parameters, and response bodies in authentication tests
 - Improved error messages for all HTTP status codes (400, 401, 403, 429, 5xx) with response body details
 - Fixed 400 Bad Request error in authentication test by using complete API parameters
+- Fixed minimum limit requirement: Mava API requires limit >= 10 (was using limit=1)
 
 ### Removed
 - FLATTEN_MESSAGES environment variable (replaced with always-on multi-table approach)

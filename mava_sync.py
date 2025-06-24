@@ -233,7 +233,7 @@ def test_mava_auth() -> bool:
 
         # Use the same parameters as fetch_page to avoid 400 errors
         params = {
-            "limit": 1,
+            "limit": 10,  # API requires limit >= 10
             "skip": 0,
             "sort": "LAST_MODIFIED",
             "order": "DESCENDING",
