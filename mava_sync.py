@@ -258,9 +258,22 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
 
     logger.debug("Fetching page with skip=%d, limit=%d", skip, PAGE_SIZE)
+    logger.debug("Using token: %s...", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None")
     
-    r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
-    r.raise_for_status()
+    try:
+        r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 401:
+            logger.error("401 Unauthorized - Check your MAVA_AUTH_TOKEN")
+            logger.error("Token starts with: %s", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None")
+            logger.error("Response body: %s", e.response.text)
+        elif e.response.status_code == 403:
+            logger.error("403 Forbidden - Token may be expired or insufficient permissions")
+            logger.error("Response body: %s", e.response.text)
+        else:
+            logger.error("HTTP %d error: %s", e.response.status_code, e.response.text)
+        raise
 
     data = r.json()
     
