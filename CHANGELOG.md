@@ -19,16 +19,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance optimizations with strategic indexing
 - Row Level Security (RLS) policies for all tables
 - Detailed schema documentation with field mappings and example queries
+- Enhanced debugging and monitoring capabilities with detailed logging
+- Database state checking functions to verify sync completeness
+- Standalone `schema.sql` file for easy database setup with indexes, views, and triggers
 
 ### Changed
 - **BREAKING CHANGE**: Complete rewrite of data storage from single table to normalized multi-table schema
+- **BREAKING CHANGE**: All database tables and views now use `mava_` prefix for better namespace organization
 - Enhanced error handling to continue processing even if individual table upserts fail
 - Improved logging to show progress across all tables
 - Updated README with comprehensive multi-table schema documentation
 - Restructured code with better separation of concerns for data transformation
+- Removed `skipEmptyMessages` filter to include all tickets in sync
+- Enhanced pagination logging to track sync progress across pages
 
 ### Fixed
 - Fixed type checking error for ticket_id parameter in message processing
+- Fixed issue where tickets without messages were being excluded from sync
 
 ### Removed
 - FLATTEN_MESSAGES environment variable (replaced with always-on multi-table approach)

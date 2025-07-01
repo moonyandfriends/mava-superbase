@@ -213,12 +213,36 @@ def health_check() -> bool:
     """Basic health check to verify API connectivity."""
     try:
         # Test Supabase connection with main tables
-        supabase.table("tickets").select("id").limit(1).execute()
+        supabase.table("mava_tickets").select("id").limit(1).execute()
         logger.info("Health check passed")
         return True
     except Exception as e:
         logger.error("Health check failed: %s", e)
         return False
+
+
+def check_existing_tickets() -> None:
+    """Check how many tickets currently exist in Supabase."""
+    try:
+        # Get count of existing tickets
+        result = supabase.table("mava_tickets").select("id").execute()
+        ticket_count = len(result.data) if result.data else 0
+        
+        # Get count of existing customers
+        customer_result = supabase.table("mava_customers").select("id").execute()
+        customer_count = len(customer_result.data) if customer_result.data else 0
+        
+        logger.info("Current Supabase state: %d tickets, %d customers", ticket_count, customer_count)
+        
+        # Get some recent tickets for reference
+        recent_tickets = supabase.table("mava_tickets").select("id,status,created_at").order("created_at", desc=True).limit(5).execute()
+        if recent_tickets.data:
+            logger.info("Recent tickets in database:")
+            for ticket in recent_tickets.data:
+                logger.info("  - %s: %s (created: %s)", ticket.get('id'), ticket.get('status'), ticket.get('created_at'))
+                
+    except Exception as e:
+        logger.error("Failed to check existing tickets: %s", e)
 
 
 def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
@@ -228,15 +252,20 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         "skip": skip,
         "sort": "LAST_MODIFIED",
         "order": "DESCENDING",
-        "skipEmptyMessages": "true",
+        # Removed skipEmptyMessages to include all tickets
     }
 
     headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
 
+    logger.debug("Fetching page with skip=%d, limit=%d", skip, PAGE_SIZE)
+    
     r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
     r.raise_for_status()
 
     data = r.json()
+    
+    # Log response structure for debugging
+    logger.debug("API response keys: %s", list(data.keys()) if isinstance(data, dict) else "Not a dict")
 
     # Handle different response formats from Mava API
     if isinstance(data, dict) and "tickets" in data:
@@ -246,6 +275,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     else:
         tickets = data.get("tickets") or data.get("data") or []
 
+    logger.debug("Retrieved %d tickets from API", len(tickets))
     return tickets
 
 
@@ -318,11 +348,11 @@ def process_tickets_batch(tickets: list[dict[str, Any]]) -> None:
 
     # Upsert to all tables
     # Order matters: customers first, then tickets (which reference customers), then dependent tables
-    upsert_to_table("customers", customers_data)
-    upsert_to_table("tickets", tickets_data)
-    upsert_to_table("messages", messages_data)
-    upsert_to_table("ticket_attributes", ticket_attributes_data)
-    upsert_to_table("customer_attributes", customer_attributes_data)
+    upsert_to_table("mava_customers", customers_data)
+    upsert_to_table("mava_tickets", tickets_data)
+    upsert_to_table("mava_messages", messages_data)
+    upsert_to_table("mava_ticket_attributes", ticket_attributes_data)
+    upsert_to_table("mava_customer_attributes", customer_attributes_data)
 
     logger.info(
         "Processed batch: %d customers, %d tickets, %d messages, %d ticket attrs, %d customer attrs",
@@ -343,6 +373,7 @@ def sync_all_pages() -> None:
     session = requests.Session()
     skip = 0
     total_tickets = 0
+    page_count = 0
 
     while True:
         try:
@@ -352,13 +383,17 @@ def sync_all_pages() -> None:
             raise
 
         if not page:
+            logger.info("No more tickets found at skip=%d, ending sync", skip)
             break
 
+        page_count += 1
         process_tickets_batch(page)
         total_tickets += len(page)
         skip += PAGE_SIZE
+        
+        logger.info("Page %d: processed %d tickets (total: %d)", page_count, len(page), total_tickets)
 
-    logger.info("Sync complete — %d tickets processed across all tables", total_tickets)
+    logger.info("Sync complete — %d tickets processed across %d pages", total_tickets, page_count)
 
 
 if __name__ == "__main__":
@@ -368,10 +403,16 @@ if __name__ == "__main__":
             logger.error("Health check failed, exiting")
             sys.exit(1)
 
+        # Check current state before sync
+        check_existing_tickets()
+
         start = datetime.utcnow()
         sync_all_pages()
         duration = (datetime.utcnow() - start).total_seconds()
         logger.info("Finished in %.1fs", duration)
+        
+        # Check final state after sync
+        check_existing_tickets()
     except Exception:
         logger.exception("Uncaught error — sync aborted")
         sys.exit(1)

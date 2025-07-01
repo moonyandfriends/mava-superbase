@@ -48,7 +48,7 @@ def test_health_check_success(mock_supabase):
     result = health_check()
 
     assert result is True
-    mock_supabase.table.assert_called_once_with("tickets")
+    mock_supabase.table.assert_called_once_with("mava_tickets")
 
 
 @patch("mava_sync.supabase")
@@ -145,7 +145,7 @@ def test_process_tickets_batch(mock_upsert, sample_tickets):
     process_tickets_batch(sample_tickets)
 
     # Should call upsert_to_table for each table type
-    expected_calls = ["customers", "tickets", "messages", "ticket_attributes", "customer_attributes"]
+    expected_calls = ["mava_customers", "mava_tickets", "mava_messages", "mava_ticket_attributes", "mava_customer_attributes"]
     actual_calls = [call[0][0] for call in mock_upsert.call_args_list]
     
     for expected_table in expected_calls:

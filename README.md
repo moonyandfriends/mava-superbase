@@ -78,24 +78,131 @@ docker run -d \
 
 ## Database Setup
 
-Create a table in your Supabase database:
+The easiest way to set up your database is to run the provided schema file:
+
+```bash
+# In your Supabase SQL editor, run:
+# Copy and paste the contents of schema.sql
+```
+
+Alternatively, you can create the tables manually. Here's the complete schema:
 
 ```sql
-CREATE TABLE tickets (
+-- Main tickets table
+CREATE TABLE mava_tickets (
     id TEXT PRIMARY KEY,
+    customer_id TEXT,
+    client TEXT,
+    status TEXT,
+    priority TEXT,
+    source_type TEXT,
+    category TEXT,
+    assigned_to TEXT,
+    discord_thread_id TEXT,
+    interaction_identifier TEXT,
+    is_discord_thread_deleted BOOLEAN,
+    discord_users JSONB,
+    ai_status TEXT,
+    is_ai_enabled_in_flow_root BOOLEAN,
+    is_button_in_flow_root_clicked BOOLEAN,
+    force_button_selection BOOLEAN,
+    is_user_rating_requested BOOLEAN,
+    is_visible BOOLEAN,
+    mentions JSONB,
+    first_customer_message_created_at TIMESTAMP WITH TIME ZONE,
+    first_agent_message_created_at TIMESTAMP WITH TIME ZONE,
+    tags JSONB,
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,
-    status TEXT,
-    title TEXT,
-    description TEXT,
-    -- Add other fields as needed based on Mava API response
+    version INTEGER,
+    disabled BOOLEAN,
+    raw_data JSONB
 );
 
--- Enable Row Level Security (recommended)
-ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+-- Customers table
+CREATE TABLE mava_customers (
+    id TEXT PRIMARY KEY,
+    discord_author_id TEXT,
+    client TEXT,
+    name TEXT,
+    avatar_url TEXT,
+    discord_joined_at TIMESTAMP WITH TIME ZONE,
+    wallet_address TEXT,
+    discord_roles JSONB,
+    custom_fields JSONB,
+    notes JSONB,
+    user_ratings JSONB,
+    created_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    version INTEGER,
+    raw_data JSONB
+);
 
--- Create policy for service role
-CREATE POLICY "Service role can manage tickets" ON tickets
+-- Messages table
+CREATE TABLE mava_messages (
+    id TEXT PRIMARY KEY,
+    ticket_id TEXT REFERENCES mava_tickets(id),
+    sender TEXT,
+    sender_reference_type TEXT,
+    from_customer BOOLEAN,
+    content TEXT,
+    is_picture BOOLEAN,
+    is_read BOOLEAN,
+    message_type TEXT,
+    message_status TEXT,
+    is_edited BOOLEAN,
+    is_deleted BOOLEAN,
+    read_by JSONB,
+    mentions JSONB,
+    pre_submission_identifier TEXT,
+    foreign_identifier TEXT,
+    action_log_from TEXT,
+    action_log_to TEXT,
+    replied_to TEXT,
+    client TEXT,
+    attachments JSONB,
+    reactions JSONB,
+    created_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    version INTEGER,
+    raw_data JSONB
+);
+
+-- Ticket attributes table
+CREATE TABLE mava_ticket_attributes (
+    id TEXT PRIMARY KEY,
+    ticket_id TEXT REFERENCES mava_tickets(id),
+    attribute TEXT,
+    content TEXT,
+    raw_data JSONB
+);
+
+-- Customer attributes table
+CREATE TABLE mava_customer_attributes (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT REFERENCES mava_customers(id),
+    attribute TEXT,
+    content TEXT,
+    raw_data JSONB
+);
+
+-- Enable Row Level Security on all tables
+ALTER TABLE mava_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_ticket_attributes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_customer_attributes ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for service role
+CREATE POLICY "Service role can manage mava_tickets" ON mava_tickets
+    FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role can manage mava_customers" ON mava_customers
+    FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role can manage mava_messages" ON mava_messages
+    FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role can manage mava_ticket_attributes" ON mava_ticket_attributes
+    FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role can manage mava_customer_attributes" ON mava_customer_attributes
     FOR ALL USING (auth.role() = 'service_role');
 ```
 
@@ -146,6 +253,7 @@ To change the schedule, modify the `cronSchedule` in `railway.json`.
 ```
 mava-superbase/
 ├── mava_sync.py        # Main sync script
+├── schema.sql          # Database schema and setup
 ├── requirements.txt    # Python dependencies
 ├── Dockerfile         # Container configuration
 ├── railway.json       # Railway deployment config
@@ -179,9 +287,10 @@ The script uses the Mava tickets API:
 
 ### Supabase Operations
 
-- **Table**: `tickets`
+- **Tables**: `mava_tickets`, `mava_customers`, `mava_messages`, `mava_ticket_attributes`, `mava_customer_attributes`
 - **Operation**: `UPSERT` (insert or update)
-- **Conflict Resolution**: Uses `id` field as primary key
+- **Conflict Resolution**: Uses `id` field as primary key for each table
+- **Relationships**: Messages and attributes reference tickets/customers via foreign keys
 
 ## Troubleshooting
 
