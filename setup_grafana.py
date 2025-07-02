@@ -14,19 +14,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class GrafanaSetup:
     def __init__(self, grafana_url: str, api_key: str):
-        self.grafana_url = grafana_url.rstrip('/')
+        self.grafana_url = grafana_url.rstrip("/")
         self.api_key = api_key
         self.headers = {
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json'
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
         }
 
     def test_connection(self) -> bool:
         """Test connection to Grafana."""
         try:
-            response = requests.get(f'{self.grafana_url}/api/health', headers=self.headers)
+            response = requests.get(
+                f"{self.grafana_url}/api/health", headers=self.headers
+            )
             return response.status_code == 200
         except Exception as e:
             print(f"Failed to connect to Grafana: {e}")
@@ -36,9 +39,9 @@ class GrafanaSetup:
         """Add Supabase as a PostgreSQL data source."""
         try:
             response = requests.post(
-                f'{self.grafana_url}/api/datasources',
+                f"{self.grafana_url}/api/datasources",
                 headers=self.headers,
-                json=datasource_config
+                json=datasource_config,
             )
 
             if response.status_code == 200:
@@ -57,18 +60,20 @@ class GrafanaSetup:
             # Prepare the import payload
             import_payload = {
                 "dashboard": dashboard_json["dashboard"],
-                "overwrite": True
+                "overwrite": True,
             }
 
             response = requests.post(
-                f'{self.grafana_url}/api/dashboards/db',
+                f"{self.grafana_url}/api/dashboards/db",
                 headers=self.headers,
-                json=import_payload
+                json=import_payload,
             )
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"✅ Dashboard imported successfully: {result.get('title', 'Unknown')}")
+                print(
+                    f"✅ Dashboard imported successfully: {result.get('title', 'Unknown')}"
+                )
                 print(f"   URL: {self.grafana_url}{result.get('url', '')}")
                 return True
             else:
@@ -78,26 +83,25 @@ class GrafanaSetup:
             print(f"❌ Error importing dashboard: {e}")
             return False
 
+
 def create_supabase_datasource_config() -> dict[str, Any]:
     """Create Supabase PostgreSQL data source configuration."""
-    supabase_url = os.getenv('SUPABASE_URL')
-    supabase_key = os.getenv('SUPABASE_SERVICE_KEY')
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
 
     if not supabase_url or not supabase_key:
         print("❌ SUPABASE_URL and SUPABASE_SERVICE_KEY must be set in environment")
         return {}
 
     # Extract host from Supabase URL
-    host = supabase_url.replace('https://', '').replace('http://', '')
+    host = supabase_url.replace("https://", "").replace("http://", "")
 
     return {
         "name": "Mava Supabase",
         "type": "postgres",
         "url": f"{host}:5432",
         "user": "postgres",
-        "secureJsonData": {
-            "password": supabase_key
-        },
+        "secureJsonData": {"password": supabase_key},
         "jsonData": {
             "database": "postgres",
             "sslmode": "require",
@@ -105,11 +109,12 @@ def create_supabase_datasource_config() -> dict[str, Any]:
             "maxIdleConns": 100,
             "connMaxLifetime": 14400,
             "postgresVersion": 1200,
-            "timescaledb": False
+            "timescaledb": False,
         },
         "access": "proxy",
-        "isDefault": False
+        "isDefault": False,
     }
+
 
 def load_dashboard_json(filename: str) -> dict[str, Any]:
     """Load dashboard JSON from file."""
@@ -120,14 +125,15 @@ def load_dashboard_json(filename: str) -> dict[str, Any]:
         print(f"❌ Error loading {filename}: {e}")
         return {}
 
+
 def main():
     """Main setup function."""
     print("🚀 Mava Support Grafana Setup")
     print("=" * 40)
 
     # Get Grafana configuration
-    grafana_url = os.getenv('GRAFANA_URL')
-    grafana_api_key = os.getenv('GRAFANA_API_KEY')
+    grafana_url = os.getenv("GRAFANA_URL")
+    grafana_api_key = os.getenv("GRAFANA_API_KEY")
 
     if not grafana_url or not grafana_api_key:
         print("❌ Please set GRAFANA_URL and GRAFANA_API_KEY environment variables")
@@ -161,8 +167,8 @@ def main():
     print("\n📈 Importing dashboards...")
 
     dashboard_files = [
-        'grafana_dashboard_overview.json',
-        'grafana_dashboard_realtime.json'
+        "grafana_dashboard_overview.json",
+        "grafana_dashboard_realtime.json",
     ]
 
     for filename in dashboard_files:
@@ -179,6 +185,7 @@ def main():
     print("2. Navigate to the imported dashboards")
     print("3. Configure alerts based on the thresholds in grafana_dashboards.md")
     print("4. Customize the dashboards as needed")
+
 
 if __name__ == "__main__":
     main()

@@ -351,7 +351,7 @@ def fetch_team_members(session: requests.Session) -> list[dict[str, Any]]:
     headers = {
         "User-Agent": "Mava-Supabase-Sync/1.0",
         "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     logger.debug("Fetching team members from Mava API")
@@ -360,7 +360,13 @@ def fetch_team_members(session: requests.Session) -> list[dict[str, Any]]:
     )
 
     try:
-        r = session.get("https://gateway.mava.app/team/members", params=params, headers=headers, cookies=cookies, timeout=30)
+        r = session.get(
+            "https://gateway.mava.app/team/members",
+            params=params,
+            headers=headers,
+            cookies=cookies,
+            timeout=30,
+        )
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
@@ -382,10 +388,7 @@ def fetch_team_members(session: requests.Session) -> list[dict[str, Any]]:
     data = r.json()
 
     # Log response structure for debugging
-    logger.debug(
-        "Team members API response type: %s",
-        type(data).__name__
-    )
+    logger.debug("Team members API response type: %s", type(data).__name__)
 
     # Handle different response formats
     if isinstance(data, list):
@@ -410,8 +413,12 @@ def transform_team_member(member_data: dict[str, Any]) -> dict[str, Any]:
         "type": member_data.get("type"),
         "client": member_data.get("client"),
         "is_archived": member_data.get("isArchived", False),
-        "is_custom_signature_enabled": member_data.get("isCustomSignatureEnabled", False),
-        "is_sound_notification_enabled": member_data.get("isSoundNotificationEnabled", False),
+        "is_custom_signature_enabled": member_data.get(
+            "isCustomSignatureEnabled", False
+        ),
+        "is_sound_notification_enabled": member_data.get(
+            "isSoundNotificationEnabled", False
+        ),
         "is_email_verified": member_data.get("isEmailVerified", False),
         "avatar": member_data.get("avatar"),
         "custom_signature": member_data.get("customSignature"),
@@ -425,7 +432,7 @@ def transform_team_member(member_data: dict[str, Any]) -> dict[str, Any]:
         "created_at": member_data.get("createdAt"),
         "updated_at": member_data.get("updatedAt"),
         "version": member_data.get("__v", 0),
-        "raw_data": member_data
+        "raw_data": member_data,
     }
 
 
@@ -446,7 +453,7 @@ def fetch_client_data(session: requests.Session) -> dict[str, Any]:
     headers = {
         "User-Agent": "Mava-Supabase-Sync/1.0",
         "Accept": "application/json",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
 
     logger.debug("Fetching client data from Mava API")
@@ -455,7 +462,13 @@ def fetch_client_data(session: requests.Session) -> dict[str, Any]:
     )
 
     try:
-        r = session.get("https://gateway.mava.app/client/get", params=params, headers=headers, cookies=cookies, timeout=30)
+        r = session.get(
+            "https://gateway.mava.app/client/get",
+            params=params,
+            headers=headers,
+            cookies=cookies,
+            timeout=30,
+        )
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
@@ -477,10 +490,7 @@ def fetch_client_data(session: requests.Session) -> dict[str, Any]:
     data = r.json()
 
     # Log response structure for debugging
-    logger.debug(
-        "Client data API response type: %s",
-        type(data).__name__
-    )
+    logger.debug("Client data API response type: %s", type(data).__name__)
 
     logger.debug("Retrieved client data from API")
     return data
@@ -504,7 +514,9 @@ def transform_client_data(client_data: dict[str, Any]) -> dict[str, Any]:
         "user_ratings": client_data.get("userRatings", []),
         "onboarding": client_data.get("onboarding", {}),
         "template_answers": client_data.get("templateAnswers", []),
-        "is_reopening_tickets_enabled": client_data.get("isReopeningTicketsEnabled", False),
+        "is_reopening_tickets_enabled": client_data.get(
+            "isReopeningTicketsEnabled", False
+        ),
         "stripe_customer_id": client_data.get("stripeCustomerId"),
         "token": client_data.get("token"),
         "flow_root": client_data.get("flowRoot"),
@@ -513,7 +525,7 @@ def transform_client_data(client_data: dict[str, Any]) -> dict[str, Any]:
         "created_at": client_data.get("createdAt"),
         "updated_at": client_data.get("updatedAt"),
         "version": client_data.get("__v", 0),
-        "raw_data": client_data
+        "raw_data": client_data,
     }
 
 
@@ -543,7 +555,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         "hasTagFilter": "false",
         "aiStatus": "",
         "hasAiStatusFilter": "false",
-        "skipEmptyMessages": "false"
+        "skipEmptyMessages": "false",
     }
 
     headers = {"X-Auth-Token": MAVA_AUTH_TOKEN}
