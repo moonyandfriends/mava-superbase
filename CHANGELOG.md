@@ -19,13 +19,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance optimizations with strategic indexing
 - Row Level Security (RLS) policies for all tables
 - Detailed schema documentation with field mappings and example queries
+- Enhanced debugging and monitoring capabilities with detailed logging
+- Database state checking functions to verify sync completeness
+- Standalone `schema.sql` file for easy database setup with indexes, views, and triggers
+- Team members sync functionality
+  - New `mava_team_members` table with comprehensive member data
+  - Automatic team member synchronization during sync process
+  - Support for member types, notifications, and filter configurations
+  - Active team members view for easy querying
+- Client/Organization data sync functionality
+  - New `mava_clients` table with comprehensive client configuration
+  - Automatic client data synchronization during sync process
+  - Support for client settings, tags, categories, and integrations
+  - Client summary view for easy configuration overview
 
 ### Changed
 - **BREAKING CHANGE**: Complete rewrite of data storage from single table to normalized multi-table schema
+- **BREAKING CHANGE**: All database tables and views now use `mava_` prefix for better namespace organization
 - Enhanced error handling to continue processing even if individual table upserts fail
 - Improved logging to show progress across all tables
 - Updated README with comprehensive multi-table schema documentation
 - Restructured code with better separation of concerns for data transformation
+- Removed `skipEmptyMessages` filter to include all tickets in sync
+- Enhanced pagination logging to track sync progress across pages
 
 ### Fixed
 - Fixed type checking error for ticket_id parameter in message processing
@@ -34,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved error messages for all HTTP status codes (400, 401, 403, 429, 5xx) with response body details
 - Fixed 400 Bad Request error in authentication test by using complete API parameters
 - Fixed minimum limit requirement: Mava API requires limit >= 10 (was using limit=1)
+- Fixed issue where tickets without messages were being excluded from sync
 
 ### Removed
 - FLATTEN_MESSAGES environment variable (replaced with always-on multi-table approach)

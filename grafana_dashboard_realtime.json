@@ -1,0 +1,197 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Mava Support - Real-time Monitoring",
+    "tags": ["mava", "support", "realtime"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "1m",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Open Tickets by Priority",
+        "type": "barchart",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT priority, COUNT(*) as open_tickets FROM tickets WHERE status != 'CLOSED' GROUP BY priority ORDER BY CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END;",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Recent Activity (Last 24 Hours)",
+        "type": "stat",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT 'New Tickets' as activity_type, COUNT(*) as count FROM tickets WHERE created_at >= NOW() - INTERVAL '24 hours' UNION ALL SELECT 'New Messages' as activity_type, COUNT(*) as count FROM messages WHERE created_at >= NOW() - INTERVAL '24 hours' UNION ALL SELECT 'Closed Tickets' as activity_type, COUNT(*) as count FROM tickets WHERE updated_at >= NOW() - INTERVAL '24 hours' AND status = 'CLOSED';",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "displayMode": "list"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "SLA Breach Risk",
+        "type": "stat",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT COUNT(*) as tickets_at_risk FROM tickets WHERE status != 'CLOSED' AND created_at <= NOW() - INTERVAL '48 hours' AND priority = 'HIGH';",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 3}
+              ]
+            },
+            "custom": {
+              "displayMode": "single-stat"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Agent Workload",
+        "type": "table",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT assigned_to, COUNT(*) as assigned_tickets, COUNT(CASE WHEN status = 'CLOSED' THEN 1 END) as closed_tickets FROM tickets WHERE assigned_to IS NOT NULL GROUP BY assigned_to ORDER BY assigned_tickets DESC;",
+            "format": "table"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Recent Messages",
+        "type": "timeseries",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT created_at as time, COUNT(*) as message_count FROM messages WHERE created_at >= $__timeFilter(created_at) GROUP BY DATE_TRUNC('hour', created_at) ORDER BY created_at;",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "Customer vs Agent Messages",
+        "type": "timeseries",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT created_at as time, SUM(CASE WHEN from_customer = true THEN 1 ELSE 0 END) as customer_messages, SUM(CASE WHEN from_customer = false THEN 1 ELSE 0 END) as agent_messages FROM messages WHERE created_at >= $__timeFilter(created_at) GROUP BY DATE_TRUNC('hour', created_at) ORDER BY created_at;",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "timeFilter",
+          "type": "query",
+          "query": "$__timeFilter(created_at)",
+          "current": {
+            "value": "$__timeFilter(created_at)"
+          }
+        }
+      ]
+    }
+  }
+} 

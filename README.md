@@ -78,22 +78,18 @@ docker run -d \
 
 ## Database Setup
 
-The application requires 5 tables in your Supabase database. You can set up the database schema in one of two ways:
+The easiest way to set up your database is to run the provided schema file:
 
-### Option 1: Use the provided SQL file (Recommended)
+```bash
+# In your Supabase SQL editor, run:
+# Copy and paste the contents of schema.sql
+```
 
-1. Go to your Supabase project dashboard
-2. Navigate to the SQL Editor
-3. Copy and paste the contents of `database_schema.sql` into the editor
-4. Run the SQL script
+Alternatively, you can create the tables manually. Here's the complete schema:
 
-### Option 2: Manual table creation
-
-If you prefer to create tables manually, here are the required tables:
-
-#### Customers Table
 ```sql
-CREATE TABLE customers (
+-- Customers table
+CREATE TABLE mava_customers (
     id TEXT PRIMARY KEY,
     discord_author_id TEXT,
     client TEXT,
@@ -101,22 +97,20 @@ CREATE TABLE customers (
     avatar_url TEXT,
     discord_joined_at TIMESTAMP WITH TIME ZONE,
     wallet_address TEXT,
-    discord_roles JSONB DEFAULT '[]',
-    custom_fields JSONB DEFAULT '[]',
-    notes JSONB DEFAULT '[]',
-    user_ratings JSONB DEFAULT '[]',
+    discord_roles JSONB,
+    custom_fields JSONB,
+    notes JSONB,
+    user_ratings JSONB,
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,
     version INTEGER,
     raw_data JSONB
 );
-```
 
-#### Tickets Table
-```sql
-CREATE TABLE tickets (
+-- Main tickets table
+CREATE TABLE mava_tickets (
     id TEXT PRIMARY KEY,
-    customer_id TEXT REFERENCES customers(id),
+    customer_id TEXT REFERENCES mava_customers(id),
     client TEXT,
     status TEXT,
     priority TEXT,
@@ -125,106 +119,90 @@ CREATE TABLE tickets (
     assigned_to TEXT,
     discord_thread_id TEXT,
     interaction_identifier TEXT,
-    is_discord_thread_deleted BOOLEAN DEFAULT FALSE,
-    discord_users JSONB DEFAULT '[]',
+    is_discord_thread_deleted BOOLEAN,
+    discord_users JSONB,
     ai_status TEXT,
-    is_ai_enabled_in_flow_root BOOLEAN DEFAULT FALSE,
-    is_button_in_flow_root_clicked BOOLEAN DEFAULT FALSE,
-    force_button_selection BOOLEAN DEFAULT FALSE,
-    is_user_rating_requested BOOLEAN DEFAULT FALSE,
-    is_visible BOOLEAN DEFAULT TRUE,
-    mentions JSONB DEFAULT '[]',
+    is_ai_enabled_in_flow_root BOOLEAN,
+    is_button_in_flow_root_clicked BOOLEAN,
+    force_button_selection BOOLEAN,
+    is_user_rating_requested BOOLEAN,
+    is_visible BOOLEAN,
+    mentions JSONB,
     first_customer_message_created_at TIMESTAMP WITH TIME ZONE,
     first_agent_message_created_at TIMESTAMP WITH TIME ZONE,
-    tags JSONB DEFAULT '[]',
+    tags JSONB,
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,
     version INTEGER,
-    disabled BOOLEAN DEFAULT FALSE,
+    disabled BOOLEAN,
     raw_data JSONB
 );
-```
 
-#### Messages Table
-```sql
-CREATE TABLE messages (
+-- Messages table
+CREATE TABLE mava_messages (
     id TEXT PRIMARY KEY,
-    ticket_id TEXT REFERENCES tickets(id),
+    ticket_id TEXT REFERENCES mava_tickets(id),
     sender TEXT,
     sender_reference_type TEXT,
-    from_customer BOOLEAN DEFAULT FALSE,
+    from_customer BOOLEAN,
     content TEXT,
-    is_picture BOOLEAN DEFAULT FALSE,
-    is_read BOOLEAN DEFAULT FALSE,
+    is_picture BOOLEAN,
+    is_read BOOLEAN,
     message_type TEXT,
     message_status TEXT,
-    is_edited BOOLEAN DEFAULT FALSE,
-    is_deleted BOOLEAN DEFAULT FALSE,
-    read_by JSONB DEFAULT '[]',
-    mentions JSONB DEFAULT '[]',
+    is_edited BOOLEAN,
+    is_deleted BOOLEAN,
+    read_by JSONB,
+    mentions JSONB,
     pre_submission_identifier TEXT,
     foreign_identifier TEXT,
     action_log_from TEXT,
     action_log_to TEXT,
     replied_to TEXT,
     client TEXT,
-    attachments JSONB DEFAULT '[]',
-    reactions JSONB DEFAULT '[]',
+    attachments JSONB,
+    reactions JSONB,
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,
     version INTEGER,
     raw_data JSONB
 );
-```
 
-#### Ticket Attributes Table
-```sql
-CREATE TABLE ticket_attributes (
+-- Ticket attributes table
+CREATE TABLE mava_ticket_attributes (
     id TEXT PRIMARY KEY,
-    ticket_id TEXT REFERENCES tickets(id),
+    ticket_id TEXT REFERENCES mava_tickets(id),
     attribute TEXT,
     content TEXT,
     raw_data JSONB
 );
-```
 
-#### Customer Attributes Table
-```sql
-CREATE TABLE customer_attributes (
+-- Customer attributes table
+CREATE TABLE mava_customer_attributes (
     id TEXT PRIMARY KEY,
-    customer_id TEXT REFERENCES customers(id),
+    customer_id TEXT REFERENCES mava_customers(id),
     attribute TEXT,
     content TEXT,
     raw_data JSONB
 );
-```
 
-### Enable Row Level Security
+-- Enable Row Level Security on all tables
+ALTER TABLE mava_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_ticket_attributes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_customer_attributes ENABLE ROW LEVEL SECURITY;
 
-After creating the tables, enable Row Level Security and create policies:
-
-```sql
--- Enable RLS on all tables
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ticket_attributes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customer_attributes ENABLE ROW LEVEL SECURITY;
-
--- Create policies for service role access
-CREATE POLICY "Service role can manage customers" ON customers
+-- Create policies for service role
+CREATE POLICY "Service role can manage mava_tickets" ON mava_tickets
     FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role can manage tickets" ON tickets
+CREATE POLICY "Service role can manage mava_customers" ON mava_customers
     FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role can manage messages" ON messages
+CREATE POLICY "Service role can manage mava_messages" ON mava_messages
     FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role can manage ticket_attributes" ON ticket_attributes
+CREATE POLICY "Service role can manage mava_ticket_attributes" ON mava_ticket_attributes
     FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role can manage customer_attributes" ON customer_attributes
+CREATE POLICY "Service role can manage mava_customer_attributes" ON mava_customer_attributes
     FOR ALL USING (auth.role() = 'service_role');
 ```
 
@@ -275,7 +253,7 @@ To change the schedule, modify the `cronSchedule` in `railway.json`.
 ```
 mava-superbase/
 ├── mava_sync.py        # Main sync script
-├── database_schema.sql # Database schema definition
+├── schema.sql          # Database schema and setup
 ├── requirements.txt    # Python dependencies
 ├── Dockerfile         # Container configuration
 ├── railway.json       # Railway deployment config
@@ -309,9 +287,10 @@ The script uses the Mava tickets API:
 
 ### Supabase Operations
 
-- **Tables**: `customers`, `tickets`, `messages`, `ticket_attributes`, `customer_attributes`
+- **Tables**: `mava_tickets`, `mava_customers`, `mava_messages`, `mava_ticket_attributes`, `mava_customer_attributes`
 - **Operation**: `UPSERT` (insert or update)
-- **Conflict Resolution**: Uses `id` field as primary key
+- **Conflict Resolution**: Uses `id` field as primary key for each table
+- **Relationships**: Messages and attributes reference tickets/customers via foreign keys
 
 ## Troubleshooting
 
@@ -321,7 +300,7 @@ The script uses the Mava tickets API:
 ```
 Health check failed: relation "public.tickets" does not exist
 ```
-→ Run the database schema setup using `database_schema.sql`
+→ Run the database schema setup using `schema.sql`
 
 **Authentication Errors**
 ```

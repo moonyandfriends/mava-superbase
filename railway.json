@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "cronSchedule": "0 * * * *",
+    "cronSchedule": "0 */4 * * *",
     "startCommand": "python mava_sync.py"
   },
   "environments": {

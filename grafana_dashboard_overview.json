@@ -1,0 +1,132 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Mava Support - Ticket Overview",
+    "tags": ["mava", "support", "tickets"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "5m",
+    "time": {
+      "from": "now-30d",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total Tickets by Status",
+        "type": "stat",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT status, COUNT(*) as ticket_count FROM tickets WHERE created_at >= $__timeFilter(created_at) GROUP BY status ORDER BY ticket_count DESC;",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "displayMode": "list"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Tickets Created Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT created_at as time, COUNT(*) as tickets_created FROM tickets WHERE created_at >= $__timeFilter(created_at) GROUP BY DATE(created_at) ORDER BY created_at;",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 6,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Priority Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT priority, COUNT(*) as count FROM tickets WHERE created_at >= $__timeFilter(created_at) GROUP BY priority ORDER BY CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END;",
+            "format": "table"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Response Time Metrics",
+        "type": "stat",
+        "targets": [
+          {
+            "refId": "A",
+            "rawQuery": true,
+            "rawSql": "SELECT AVG(EXTRACT(EPOCH FROM (first_agent_message_created_at - first_customer_message_created_at))/3600) as avg_response_hours, MIN(EXTRACT(EPOCH FROM (first_agent_message_created_at - first_customer_message_created_at))/3600) as min_response_hours, MAX(EXTRACT(EPOCH FROM (first_agent_message_created_at - first_customer_message_created_at))/3600) as max_response_hours FROM tickets WHERE first_agent_message_created_at IS NOT NULL AND first_customer_message_created_at IS NOT NULL AND created_at >= $__timeFilter(created_at);",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "displayMode": "list"
+            },
+            "unit": "h"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "timeFilter",
+          "type": "query",
+          "query": "$__timeFilter(created_at)",
+          "current": {
+            "value": "$__timeFilter(created_at)"
+          }
+        }
+      ]
+    }
+  }
+} 
