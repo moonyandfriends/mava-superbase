@@ -262,12 +262,31 @@ def check_existing_tickets() -> None:
 
 def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     """Return a single page of tickets from the Mava API."""
+    from datetime import datetime, timezone
+    
+    # Get current timestamp in ISO format
+    current_time = datetime.now(timezone.utc).isoformat()
+    
     params: dict[str, str | int] = {
         "limit": PAGE_SIZE,
         "skip": skip,
         "sort": "LAST_MODIFIED",
         "order": "DESCENDING",
-        # Removed skipEmptyMessages to include all tickets
+        "filterVersion": "3",
+        "filterLastUpdated": current_time,
+        "priority": "",
+        "hasPriorityFilter": "false",
+        "status": "Open,Pending,Waiting,Resolved,Spam",
+        "hasStatusFilter": "true",
+        "category": "",
+        "hasCategoryFilter": "false",
+        "assignedTo": "",
+        "hasAgentFilter": "false",
+        "tag": "",
+        "hasTagFilter": "false",
+        "aiStatus": "",
+        "hasAiStatusFilter": "false",
+        "skipEmptyMessages": "false"
     }
 
     headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
