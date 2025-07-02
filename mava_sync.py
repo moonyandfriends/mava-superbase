@@ -232,14 +232,29 @@ def check_existing_tickets() -> None:
         customer_result = supabase.table("mava_customers").select("id").execute()
         customer_count = len(customer_result.data) if customer_result.data else 0
 
-        logger.info("Current Supabase state: %d tickets, %d customers", ticket_count, customer_count)
+        logger.info(
+            "Current Supabase state: %d tickets, %d customers",
+            ticket_count,
+            customer_count,
+        )
 
         # Get some recent tickets for reference
-        recent_tickets = supabase.table("mava_tickets").select("id,status,created_at").order("created_at", desc=True).limit(5).execute()
+        recent_tickets = (
+            supabase.table("mava_tickets")
+            .select("id,status,created_at")
+            .order("created_at", desc=True)
+            .limit(5)
+            .execute()
+        )
         if recent_tickets.data:
             logger.info("Recent tickets in database:")
             for ticket in recent_tickets.data:
-                logger.info("  - %s: %s (created: %s)", ticket.get('id'), ticket.get('status'), ticket.get('created_at'))
+                logger.info(
+                    "  - %s: %s (created: %s)",
+                    ticket.get("id"),
+                    ticket.get("status"),
+                    ticket.get("created_at"),
+                )
 
     except Exception as e:
         logger.error("Failed to check existing tickets: %s", e)
@@ -258,7 +273,9 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
 
     logger.debug("Fetching page with skip=%d, limit=%d", skip, PAGE_SIZE)
-    logger.debug("Using token: %s...", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None")
+    logger.debug(
+        "Using token: %s...", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None"
+    )
 
     try:
         r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
@@ -266,10 +283,15 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
             logger.error("401 Unauthorized - Check your MAVA_AUTH_TOKEN")
-            logger.error("Token starts with: %s", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None")
+            logger.error(
+                "Token starts with: %s",
+                MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None",
+            )
             logger.error("Response body: %s", e.response.text)
         elif e.response.status_code == 403:
-            logger.error("403 Forbidden - Token may be expired or insufficient permissions")
+            logger.error(
+                "403 Forbidden - Token may be expired or insufficient permissions"
+            )
             logger.error("Response body: %s", e.response.text)
         else:
             logger.error("HTTP %d error: %s", e.response.status_code, e.response.text)
@@ -278,7 +300,10 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     data = r.json()
 
     # Log response structure for debugging
-    logger.debug("API response keys: %s", list(data.keys()) if isinstance(data, dict) else "Not a dict")
+    logger.debug(
+        "API response keys: %s",
+        list(data.keys()) if isinstance(data, dict) else "Not a dict",
+    )
 
     # Handle different response formats from Mava API
     if isinstance(data, dict) and "tickets" in data:
@@ -404,9 +429,18 @@ def sync_all_pages() -> None:
         total_tickets += len(page)
         skip += PAGE_SIZE
 
-        logger.info("Page %d: processed %d tickets (total: %d)", page_count, len(page), total_tickets)
+        logger.info(
+            "Page %d: processed %d tickets (total: %d)",
+            page_count,
+            len(page),
+            total_tickets,
+        )
 
-    logger.info("Sync complete — %d tickets processed across %d pages", total_tickets, page_count)
+    logger.info(
+        "Sync complete — %d tickets processed across %d pages",
+        total_tickets,
+        page_count,
+    )
 
 
 if __name__ == "__main__":

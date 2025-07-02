@@ -32,14 +32,16 @@ def sample_tickets():
             "status": "open",
             "customer": {"_id": "cust1", "name": "Test Customer"},
             "messages": [{"_id": "msg1", "content": "Test message"}],
-            "attributes": [{"_id": "attr1", "attribute": "test_attr", "content": "test_value"}]
+            "attributes": [
+                {"_id": "attr1", "attribute": "test_attr", "content": "test_value"}
+            ],
         },
         {
             "_id": "2",
             "status": "closed",
             "customer": {"_id": "cust2", "name": "Test Customer 2"},
             "messages": [],
-            "attributes": []
+            "attributes": [],
         },
     ]
 
@@ -151,7 +153,13 @@ def test_process_tickets_batch(mock_upsert, sample_tickets):
     process_tickets_batch(sample_tickets)
 
     # Should call upsert_to_table for each table type
-    expected_calls = ["mava_customers", "mava_tickets", "mava_messages", "mava_ticket_attributes", "mava_customer_attributes"]
+    expected_calls = [
+        "mava_customers",
+        "mava_tickets",
+        "mava_messages",
+        "mava_ticket_attributes",
+        "mava_customer_attributes",
+    ]
     actual_calls = [call[0][0] for call in mock_upsert.call_args_list]
 
     for expected_table in expected_calls:
