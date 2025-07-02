@@ -815,7 +815,8 @@ def sync_all_pages() -> None:
     )
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Main entry point for the sync service."""
     try:
         # Initial health check
         if not health_check():
@@ -825,9 +826,9 @@ if __name__ == "__main__":
         # Check current state before sync
         check_existing_tickets()
 
-        start = datetime.utcnow()
+        start = datetime.now()
         sync_all_pages()
-        duration = (datetime.utcnow() - start).total_seconds()
+        duration = (datetime.now() - start).total_seconds()
         logger.info("Finished in %.1fs", duration)
 
         # Check final state after sync
@@ -835,3 +836,7 @@ if __name__ == "__main__":
     except Exception:
         logger.exception("Uncaught error — sync aborted")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

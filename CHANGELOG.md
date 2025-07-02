@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed 400 Bad Request error in authentication test by using complete API parameters
 - Fixed minimum limit requirement: Mava API requires limit >= 10 (was using limit=1)
 - Fixed issue where tickets without messages were being excluded from sync
+- Fixed setuptools package discovery errors by explicitly defining py_modules
+- Updated license format to use SPDX expression instead of deprecated table format
+- Removed deprecated license classifier to comply with setuptools warnings
+- Added main() function entry point for proper script installation
 
 ### Removed
 - FLATTEN_MESSAGES environment variable (replaced with always-on multi-table approach)
