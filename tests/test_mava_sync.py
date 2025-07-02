@@ -7,7 +7,13 @@ from unittest.mock import Mock, patch
 import pytest
 
 import mava_sync
-from mava_sync import fetch_page, health_check, sync_all_pages, upsert_to_table, process_tickets_batch
+from mava_sync import (
+    fetch_page,
+    health_check,
+    process_tickets_batch,
+    sync_all_pages,
+    upsert_to_table,
+)
 
 
 @pytest.fixture
@@ -22,14 +28,14 @@ def sample_tickets():
     """Sample ticket data for testing"""
     return [
         {
-            "_id": "1", 
+            "_id": "1",
             "status": "open",
             "customer": {"_id": "cust1", "name": "Test Customer"},
             "messages": [{"_id": "msg1", "content": "Test message"}],
             "attributes": [{"_id": "attr1", "attribute": "test_attr", "content": "test_value"}]
         },
         {
-            "_id": "2", 
+            "_id": "2",
             "status": "closed",
             "customer": {"_id": "cust2", "name": "Test Customer 2"},
             "messages": [],
@@ -108,7 +114,7 @@ def test_upsert_to_table_success(mock_supabase):
     )
 
     sample_records = [{"id": "1", "name": "Test"}]
-    
+
     # Should not raise any exception
     upsert_to_table("test_table", sample_records)
 
@@ -147,7 +153,7 @@ def test_process_tickets_batch(mock_upsert, sample_tickets):
     # Should call upsert_to_table for each table type
     expected_calls = ["mava_customers", "mava_tickets", "mava_messages", "mava_ticket_attributes", "mava_customer_attributes"]
     actual_calls = [call[0][0] for call in mock_upsert.call_args_list]
-    
+
     for expected_table in expected_calls:
         assert expected_table in actual_calls
 

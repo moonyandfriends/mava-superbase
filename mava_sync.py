@@ -227,20 +227,20 @@ def check_existing_tickets() -> None:
         # Get count of existing tickets
         result = supabase.table("mava_tickets").select("id").execute()
         ticket_count = len(result.data) if result.data else 0
-        
+
         # Get count of existing customers
         customer_result = supabase.table("mava_customers").select("id").execute()
         customer_count = len(customer_result.data) if customer_result.data else 0
-        
+
         logger.info("Current Supabase state: %d tickets, %d customers", ticket_count, customer_count)
-        
+
         # Get some recent tickets for reference
         recent_tickets = supabase.table("mava_tickets").select("id,status,created_at").order("created_at", desc=True).limit(5).execute()
         if recent_tickets.data:
             logger.info("Recent tickets in database:")
             for ticket in recent_tickets.data:
                 logger.info("  - %s: %s (created: %s)", ticket.get('id'), ticket.get('status'), ticket.get('created_at'))
-                
+
     except Exception as e:
         logger.error("Failed to check existing tickets: %s", e)
 
@@ -259,7 +259,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
 
     logger.debug("Fetching page with skip=%d, limit=%d", skip, PAGE_SIZE)
     logger.debug("Using token: %s...", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None")
-    
+
     try:
         r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
         r.raise_for_status()
@@ -276,7 +276,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         raise
 
     data = r.json()
-    
+
     # Log response structure for debugging
     logger.debug("API response keys: %s", list(data.keys()) if isinstance(data, dict) else "Not a dict")
 
@@ -403,7 +403,7 @@ def sync_all_pages() -> None:
         process_tickets_batch(page)
         total_tickets += len(page)
         skip += PAGE_SIZE
-        
+
         logger.info("Page %d: processed %d tickets (total: %d)", page_count, len(page), total_tickets)
 
     logger.info("Sync complete — %d tickets processed across %d pages", total_tickets, page_count)
@@ -423,7 +423,7 @@ if __name__ == "__main__":
         sync_all_pages()
         duration = (datetime.utcnow() - start).total_seconds()
         logger.info("Finished in %.1fs", duration)
-        
+
         # Check final state after sync
         check_existing_tickets()
     except Exception:
