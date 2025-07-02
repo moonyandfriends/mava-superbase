@@ -289,7 +289,13 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
         "skipEmptyMessages": "false"
     }
 
-    headers = {"Authorization": f"Bearer {MAVA_AUTH_TOKEN}"}
+    # Mava API uses cookie-based authentication, not Bearer token
+    cookies: dict[str, str] = {"x-auth-token": MAVA_AUTH_TOKEN or ""}
+    headers = {
+        "User-Agent": "Mava-Supabase-Sync/1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
 
     logger.debug("Fetching page with skip=%d, limit=%d", skip, PAGE_SIZE)
     logger.debug(
@@ -297,7 +303,7 @@ def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     )
 
     try:
-        r = session.get(MAVA_API_URL, params=params, headers=headers, timeout=30)
+        r = session.get(MAVA_API_URL, params=params, headers=headers, cookies=cookies, timeout=30)
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 401:
