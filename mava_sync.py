@@ -26,9 +26,9 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from datetime import datetime
 from typing import Any
-import time
 
 import requests
 from dotenv import load_dotenv
@@ -264,15 +264,15 @@ def check_existing_tickets() -> None:
 def fetch_team_members(session: requests.Session) -> list[dict[str, Any]]:
     """Fetch team members from the Mava API."""
     from datetime import datetime, timezone
-    
+
     # Get current timestamp in ISO format
     current_time = datetime.now(timezone.utc).isoformat()
-    
+
     params: dict[str, str | int] = {
         "filterVersion": "3",
         "filterLastUpdated": current_time,
     }
-    
+
     # Mava API uses cookie-based authentication, not Bearer token
     cookies: dict[str, str] = {"x-auth-token": MAVA_AUTH_TOKEN or ""}
     headers = {
@@ -280,12 +280,12 @@ def fetch_team_members(session: requests.Session) -> list[dict[str, Any]]:
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
-    
+
     logger.debug("Fetching team members from Mava API")
     logger.debug(
         "Using token: %s...", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None"
     )
-    
+
     try:
         r = session.get("https://gateway.mava.app/team/members", params=params, headers=headers, cookies=cookies, timeout=30)
         r.raise_for_status()
@@ -305,26 +305,26 @@ def fetch_team_members(session: requests.Session) -> list[dict[str, Any]]:
         else:
             logger.error("HTTP %d error: %s", e.response.status_code, e.response.text)
         raise
-    
+
     data = r.json()
-    
+
     # Log response structure for debugging
     logger.debug(
         "Team members API response type: %s",
         type(data).__name__
     )
-    
+
     # Handle different response formats
     if isinstance(data, list):
         members = data
     else:
         members = data.get("members") or data.get("data") or []
-    
+
     logger.debug("Retrieved %d team members from API", len(members))
-    
+
     # Pause between API calls
     time.sleep(5)
-    
+
     return members
 
 
