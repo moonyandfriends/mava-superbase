@@ -22,6 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced debugging and monitoring capabilities with detailed logging
 - Database state checking functions to verify sync completeness
 - Standalone `schema.sql` file for easy database setup with indexes, views, and triggers
+- Team members sync functionality
+  - New `mava_team_members` table with comprehensive member data
+  - Automatic team member synchronization during sync process
+  - Support for member types, notifications, and filter configurations
+  - Active team members view for easy querying
+- Client/Organization data sync functionality
+  - New `mava_clients` table with comprehensive client configuration
+  - Automatic client data synchronization during sync process
+  - Support for client settings, tags, categories, and integrations
+  - Client summary view for easy configuration overview
 
 ### Changed
 - **BREAKING CHANGE**: Complete rewrite of data storage from single table to normalized multi-table schema

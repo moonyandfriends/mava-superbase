@@ -102,6 +102,61 @@ CREATE TABLE mava_customer_attributes (
     raw_data JSONB
 );
 
+-- Team members table
+CREATE TABLE mava_team_members (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    email TEXT,
+    type TEXT,
+    client TEXT,
+    is_archived BOOLEAN DEFAULT FALSE,
+    is_custom_signature_enabled BOOLEAN DEFAULT FALSE,
+    is_sound_notification_enabled BOOLEAN DEFAULT FALSE,
+    is_email_verified BOOLEAN DEFAULT FALSE,
+    avatar TEXT,
+    custom_signature TEXT,
+    user_ratings JSONB DEFAULT '[]'::jsonb,
+    pinned_attributes JSONB DEFAULT '[]'::jsonb,
+    filter_configurations JSONB DEFAULT '[]'::jsonb,
+    master_notifications JSONB DEFAULT '{}'::jsonb,
+    device_token JSONB DEFAULT '[]'::jsonb,
+    notifications JSONB DEFAULT '[]'::jsonb,
+    two_factor_auth JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    version INTEGER DEFAULT 0,
+    raw_data JSONB
+);
+
+-- Clients/Organizations table
+CREATE TABLE mava_clients (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    creator TEXT,
+    contracts JSONB DEFAULT '[]'::jsonb,
+    origin JSONB DEFAULT '[]'::jsonb,
+    members JSONB DEFAULT '[]'::jsonb,
+    categories JSONB DEFAULT '[]'::jsonb,
+    is_ai_enabled BOOLEAN DEFAULT FALSE,
+    use_template_answers BOOLEAN DEFAULT FALSE,
+    is_csat_enabled BOOLEAN DEFAULT FALSE,
+    tags JSONB DEFAULT '[]'::jsonb,
+    hooks JSONB DEFAULT '[]'::jsonb,
+    user_ratings JSONB DEFAULT '[]'::jsonb,
+    onboarding JSONB DEFAULT '{}'::jsonb,
+    template_answers JSONB DEFAULT '[]'::jsonb,
+    is_reopening_tickets_enabled BOOLEAN DEFAULT FALSE,
+    stripe_customer_id TEXT,
+    token TEXT,
+    flow_root TEXT,
+    archived_flows JSONB DEFAULT '[]'::jsonb,
+    ai_settings TEXT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    version INTEGER DEFAULT 0,
+    raw_data JSONB
+);
+
 -- Create indexes for better query performance
 CREATE INDEX idx_mava_tickets_customer_id ON mava_tickets(customer_id);
 CREATE INDEX idx_mava_tickets_status ON mava_tickets(status);
@@ -125,12 +180,26 @@ CREATE INDEX idx_mava_ticket_attributes_attribute ON mava_ticket_attributes(attr
 CREATE INDEX idx_mava_customer_attributes_customer_id ON mava_customer_attributes(customer_id);
 CREATE INDEX idx_mava_customer_attributes_attribute ON mava_customer_attributes(attribute);
 
+CREATE INDEX idx_mava_team_members_email ON mava_team_members(email);
+CREATE INDEX idx_mava_team_members_type ON mava_team_members(type);
+CREATE INDEX idx_mava_team_members_client ON mava_team_members(client);
+CREATE INDEX idx_mava_team_members_is_archived ON mava_team_members(is_archived);
+CREATE INDEX idx_mava_team_members_created_at ON mava_team_members(created_at);
+CREATE INDEX idx_mava_team_members_updated_at ON mava_team_members(updated_at);
+
+CREATE INDEX idx_mava_clients_name ON mava_clients(name);
+CREATE INDEX idx_mava_clients_creator ON mava_clients(creator);
+CREATE INDEX idx_mava_clients_created_at ON mava_clients(created_at);
+CREATE INDEX idx_mava_clients_updated_at ON mava_clients(updated_at);
+
 -- Enable Row Level Security on all tables
 ALTER TABLE mava_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mava_customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mava_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mava_ticket_attributes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mava_customer_attributes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mava_clients ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for service role (allows the sync service to manage all data)
 CREATE POLICY "Service role can manage mava_tickets" ON mava_tickets
@@ -146,6 +215,12 @@ CREATE POLICY "Service role can manage mava_ticket_attributes" ON mava_ticket_at
     FOR ALL USING (auth.role() = 'service_role');
 
 CREATE POLICY "Service role can manage mava_customer_attributes" ON mava_customer_attributes
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can manage mava_team_members" ON mava_team_members
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role can manage mava_clients" ON mava_clients
     FOR ALL USING (auth.role() = 'service_role');
 
 -- Create useful views for common queries
@@ -198,6 +273,40 @@ FROM mava_messages
 WHERE created_at >= NOW() - INTERVAL '7 days'
 ORDER BY updated_at DESC;
 
+-- View for active team members
+CREATE VIEW mava_active_team_members AS
+SELECT 
+    id,
+    name,
+    email,
+    type,
+    client,
+    avatar,
+    custom_signature,
+    created_at,
+    updated_at
+FROM mava_team_members 
+WHERE is_archived = FALSE
+ORDER BY name;
+
+-- View for client configuration summary
+CREATE VIEW mava_client_summary AS
+SELECT 
+    id,
+    name,
+    creator,
+    is_ai_enabled,
+    use_template_answers,
+    is_csat_enabled,
+    is_reopening_tickets_enabled,
+    array_length(members, 1) as member_count,
+    array_length(categories, 1) as category_count,
+    array_length(tags, 1) as tag_count,
+    array_length(hooks, 1) as hook_count,
+    created_at,
+    updated_at
+FROM mava_clients;
+
 -- Create function to update updated_at timestamp automatically
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -218,6 +327,14 @@ CREATE TRIGGER update_mava_customers_updated_at
 
 CREATE TRIGGER update_mava_messages_updated_at 
     BEFORE UPDATE ON mava_messages 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_mava_team_members_updated_at 
+    BEFORE UPDATE ON mava_team_members 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_mava_clients_updated_at 
+    BEFORE UPDATE ON mava_clients 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Comments for documentation
