@@ -299,10 +299,10 @@ SELECT
     use_template_answers,
     is_csat_enabled,
     is_reopening_tickets_enabled,
-    array_length(members, 1) as member_count,
-    array_length(categories, 1) as category_count,
-    array_length(tags, 1) as tag_count,
-    array_length(hooks, 1) as hook_count,
+    jsonb_array_length(members) as member_count,
+    jsonb_array_length(categories) as category_count,
+    jsonb_array_length(tags) as tag_count,
+    jsonb_array_length(hooks) as hook_count,
     created_at,
     updated_at
 FROM mava_clients;

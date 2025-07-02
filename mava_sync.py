@@ -28,6 +28,7 @@ import os
 import sys
 from datetime import datetime
 from typing import Any
+import time
 
 import requests
 from dotenv import load_dotenv
@@ -320,6 +321,10 @@ def fetch_team_members(session: requests.Session) -> list[dict[str, Any]]:
         members = data.get("members") or data.get("data") or []
     
     logger.debug("Retrieved %d team members from API", len(members))
+    
+    # Pause between API calls
+    time.sleep(5)
+    
     return members
 
 
@@ -689,6 +694,9 @@ def sync_all_pages() -> None:
             len(page),
             total_tickets,
         )
+
+        # Pause between paginated API calls
+        time.sleep(5)
 
     logger.info(
         "Sync complete — %d tickets processed across %d pages",
