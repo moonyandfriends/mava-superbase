@@ -487,7 +487,7 @@ def fetch_client_data(session: requests.Session) -> dict[str, Any]:
             logger.error("HTTP %d error: %s", e.response.status_code, e.response.text)
         raise
 
-    data = r.json()
+    data: dict[str, Any] = r.json()
 
     # Log response structure for debugging
     logger.debug("Client data API response type: %s", type(data).__name__)

@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated license format to use SPDX expression instead of deprecated table format
 - Removed deprecated license classifier to comply with setuptools warnings
 - Added main() function entry point for proper script installation
+- Fixed MyPy type checking error in fetch_client_data function by adding explicit type annotation
 
 ### Removed
 - FLATTEN_MESSAGES environment variable (replaced with always-on multi-table approach)
