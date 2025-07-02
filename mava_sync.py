@@ -297,6 +297,7 @@ def health_check() -> bool:
 def check_existing_tickets() -> None:
     """Check how many tickets currently exist in Supabase."""
     try:
+        supabase = get_supabase_client()
         # Get count of existing tickets
         result = supabase.table("mava_tickets").select("id").execute()
         ticket_count = len(result.data) if result.data else 0
@@ -431,15 +432,15 @@ def transform_team_member(member_data: dict[str, Any]) -> dict[str, Any]:
 def fetch_client_data(session: requests.Session) -> dict[str, Any]:
     """Fetch client/organization data from the Mava API."""
     from datetime import datetime, timezone
-    
+
     # Get current timestamp in ISO format
     current_time = datetime.now(timezone.utc).isoformat()
-    
+
     params: dict[str, str | int] = {
         "filterVersion": "3",
         "filterLastUpdated": current_time,
     }
-    
+
     # Mava API uses cookie-based authentication, not Bearer token
     cookies: dict[str, str] = {"x-auth-token": MAVA_AUTH_TOKEN or ""}
     headers = {
@@ -447,12 +448,12 @@ def fetch_client_data(session: requests.Session) -> dict[str, Any]:
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
-    
+
     logger.debug("Fetching client data from Mava API")
     logger.debug(
         "Using token: %s...", MAVA_AUTH_TOKEN[:10] if MAVA_AUTH_TOKEN else "None"
     )
-    
+
     try:
         r = session.get("https://gateway.mava.app/client/get", params=params, headers=headers, cookies=cookies, timeout=30)
         r.raise_for_status()
@@ -472,15 +473,15 @@ def fetch_client_data(session: requests.Session) -> dict[str, Any]:
         else:
             logger.error("HTTP %d error: %s", e.response.status_code, e.response.text)
         raise
-    
+
     data = r.json()
-    
+
     # Log response structure for debugging
     logger.debug(
         "Client data API response type: %s",
         type(data).__name__
     )
-    
+
     logger.debug("Retrieved client data from API")
     return data
 
@@ -519,10 +520,10 @@ def transform_client_data(client_data: dict[str, Any]) -> dict[str, Any]:
 def fetch_page(session: requests.Session, skip: int) -> list[dict[str, Any]]:
     """Return a single page of tickets from the Mava API."""
     from datetime import datetime, timezone
-    
+
     # Get current timestamp in ISO format
     current_time = datetime.now(timezone.utc).isoformat()
-    
+
     params: dict[str, str | int] = {
         "limit": PAGE_SIZE,
         "skip": skip,
@@ -726,21 +727,21 @@ def process_tickets_batch(tickets: list[dict[str, Any]]) -> None:
 def sync_team_members(session: requests.Session) -> None:
     """Sync team members from Mava to Supabase."""
     logger.info("Starting team members sync")
-    
+
     try:
         members = fetch_team_members(session)
         if not members:
             logger.info("No team members found")
             return
-        
+
         # Transform team members data
         transformed_members = [transform_team_member(member) for member in members]
-        
+
         # Upsert to team members table
         upsert_to_table("mava_team_members", transformed_members)
-        
+
         logger.info("Team members sync complete — %d members processed", len(members))
-        
+
     except Exception:
         logger.exception("Team members sync failed")
         raise
@@ -749,21 +750,21 @@ def sync_team_members(session: requests.Session) -> None:
 def sync_client_data(session: requests.Session) -> None:
     """Sync client/organization data from Mava to Supabase."""
     logger.info("Starting client data sync")
-    
+
     try:
         client_data = fetch_client_data(session)
         if not client_data:
             logger.info("No client data found")
             return
-        
+
         # Transform client data
         transformed_client = transform_client_data(client_data)
-        
+
         # Upsert to client table
         upsert_to_table("mava_clients", [transformed_client])
-        
+
         logger.info("Client data sync complete")
-        
+
     except Exception:
         logger.exception("Client data sync failed")
         raise

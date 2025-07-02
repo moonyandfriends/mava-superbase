@@ -206,6 +206,69 @@ CREATE POLICY "Service role can manage mava_customer_attributes" ON mava_custome
     FOR ALL USING (auth.role() = 'service_role');
 ```
 
+## Analytics & Monitoring
+
+### Grafana Dashboards
+
+This project includes comprehensive Grafana dashboards for monitoring your Mava support operations. The dashboards provide real-time insights into ticket volumes, agent performance, customer satisfaction, and operational metrics.
+
+#### Quick Setup
+
+1. **Install Grafana** (if not already installed):
+   ```bash
+   # Using Docker
+   docker run -d -p 3000:3000 grafana/grafana
+   
+   # Or install locally from https://grafana.com/grafana/download
+   ```
+
+2. **Set up environment variables**:
+   ```bash
+   export GRAFANA_URL='http://localhost:3000'
+   export GRAFANA_API_KEY='your-grafana-api-key'
+   ```
+
+3. **Run the setup script**:
+   ```bash
+   python setup_grafana.py
+   ```
+
+#### Available Dashboards
+
+- **📊 Support Ticket Overview**: High-level metrics, status distribution, and response times
+- **⚡ Real-time Monitoring**: Live activity tracking, SLA breach alerts, and agent workload
+- **👥 Customer Analytics**: Customer behavior, satisfaction metrics, and activity patterns
+- **👨‍💼 Agent Performance**: Individual agent metrics, response times, and workload distribution
+- **💬 Message Analytics**: Message volume trends and customer vs agent communication patterns
+- **📈 Category Analysis**: Ticket distribution by category and source type
+
+#### Key Metrics Tracked
+
+- **Operational KPIs**: Ticket volume, resolution times, response times
+- **Agent Performance**: Workload distribution, resolution rates, response efficiency
+- **Customer Insights**: Activity patterns, satisfaction scores, lifetime value
+- **Quality Metrics**: SLA compliance, priority handling, category distribution
+- **Real-time Alerts**: High priority tickets, SLA breaches, agent overload
+
+#### Manual Setup
+
+If you prefer to set up manually:
+
+1. **Add Supabase as a PostgreSQL data source** in Grafana:
+   - Host: `your-project.supabase.co:5432`
+   - Database: `postgres`
+   - Username: `postgres`
+   - Password: Your Supabase service key
+   - SSL Mode: `require`
+
+2. **Import dashboard JSON files**:
+   - `grafana_dashboard_overview.json`
+   - `grafana_dashboard_realtime.json`
+
+3. **Configure alerts** based on the thresholds in `grafana_dashboards.md`
+
+For detailed SQL queries and advanced analytics, see `grafana_dashboards.md`.
+
 ## How It Works
 
 1. **Fetches Data**: Retrieves all tickets from Mava API using pagination
