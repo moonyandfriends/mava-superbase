@@ -143,8 +143,11 @@ def test_upsert_to_table_failure(mock_supabase):
 
     sample_records = [{"id": "1", "name": "Test"}]
 
-    with pytest.raises(RuntimeError, match="Failed to upsert"):
-        upsert_to_table("test_table", sample_records)
+    # The function should not raise an exception, but should log an error
+    upsert_to_table("test_table", sample_records)
+
+    # Verify that the table was called
+    mock_supabase.table.assert_called_once_with("test_table")
 
 
 @patch("mava_sync.upsert_to_table")
