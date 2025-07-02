@@ -6,6 +6,15 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+# Set up environment variables before importing mava_sync
+os.environ.update({
+    "MAVA_AUTH_TOKEN": "test_token",
+    "SUPABASE_URL": "https://test.supabase.co",
+    "SUPABASE_SERVICE_KEY": "test_key",
+    "PAGE_SIZE": "50",
+    "LOG_LEVEL": "INFO",
+})
+
 import mava_sync
 from mava_sync import (
     fetch_page,
@@ -184,10 +193,12 @@ def test_process_tickets_batch(mock_upsert, sample_tickets):
         assert expected_table in actual_calls
 
 
+@patch("mava_sync.sync_client_data")
+@patch("mava_sync.sync_team_members")
 @patch("mava_sync.fetch_page")
 @patch("mava_sync.process_tickets_batch")
 @patch("requests.Session")
-def test_sync_all_pages(mock_session_class, mock_process, mock_fetch, sample_tickets):
+def test_sync_all_pages(mock_session_class, mock_process, mock_fetch, mock_sync_team, mock_sync_client, sample_tickets):
     """Test complete sync process"""
     mock_session = Mock()
     mock_session_class.return_value = mock_session
@@ -199,6 +210,8 @@ def test_sync_all_pages(mock_session_class, mock_process, mock_fetch, sample_tic
 
     assert mock_fetch.call_count == 2
     mock_process.assert_called_once_with(sample_tickets)
+    mock_sync_team.assert_called_once_with(mock_session)
+    mock_sync_client.assert_called_once_with(mock_session)
 
 
 @pytest.fixture(autouse=True)

@@ -56,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed deprecated license classifier to comply with setuptools warnings
 - Added main() function entry point for proper script installation
 - Fixed MyPy type checking error in fetch_client_data function by adding explicit type annotation
+- Fixed test_sync_all_pages test failure by adding proper mocking for sync_team_members and sync_client_data functions
+- Fixed test environment variable setup by setting variables before module import
 
 ### Removed
 - FLATTEN_MESSAGES environment variable (replaced with always-on multi-table approach)
